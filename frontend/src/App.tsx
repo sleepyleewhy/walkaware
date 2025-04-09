@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import PedestrianPage from './pages/pedestrian/pedestrianPage'
 import Home from './pages/home/home'
+import Layout from './pages/layout/layout'
 
 function App() {
   const [isCurrWatching, setIsCurrWatching] = useState(false)
@@ -16,11 +17,13 @@ function App() {
   // });
   return (
     <BrowserRouter>
+    <Layout>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/accelerometer" element={<Accelerometer isCurrWatching={isCurrWatching} setIsCurrWatching={setIsCurrWatching} />} />
         <Route path="/pedestrian" element={<PedestrianPage/>}/>
       </Routes>
+      </Layout>
     </BrowserRouter>
 
     // <>
