@@ -1,12 +1,11 @@
 import { usePedestrianContext } from "../context/pedestrianContext";
-import DebugPedestrian from "./DebugPedestrian";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 const PedestrianMetrics: React.FC = () => {
     const context = usePedestrianContext();
 
     return (
-        <div className="grid grid-cols-2 space-y-5 space-x-5">
+        <div className="grid grid-cols-2 space-y-5 space-x-5 font-light">
             <Card className="bg-gray-200">
                 <CardHeader>
                     <CardTitle>Alert</CardTitle>
@@ -69,13 +68,12 @@ const PedestrianMetrics: React.FC = () => {
                 <CardContent>
                     <p>Camera active: {context.isCameraActive ? "Yes" : "No"}</p>
                     {context.cameraImage && (
-                        <img src={context.cameraImage} alt="Camera" />
+                        <img src={context.cameraImage} alt="Camera"/>
                     )}
+
                 </CardContent>
             </Card>
             <div>
-                {import.meta.env.DEV && <DebugPedestrian />}
-                {context.cameraImage && <img src={context.cameraImage} alt="Camera" />}
             </div>
         </div>
     );
