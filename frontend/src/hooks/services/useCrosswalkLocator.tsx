@@ -7,7 +7,10 @@ const useCrosswalkLocator = (
     location: Location | null,
     alertlevel: number,
     setCrosswalkId : React.Dispatch<SetStateAction<number>>,
-    orientation: number) => {
+    orientation: number,
+    isOrientationActive: boolean,
+    setIsOrientationActive: React.Dispatch<SetStateAction<boolean>>,
+    ) => {
 
 
     const crosswalks = useRef<CrosswalkWay[]>([]);
@@ -189,8 +192,11 @@ const useCrosswalkLocator = (
 
     useEffect(() => {
         
-        if (alertlevel >= 1) {
+        if (alertlevel >= 2) {
             setIsCrosswalkLocatorActive(true)
+            if (!isOrientationActive) {
+                setIsOrientationActive(true);
+            }
             if (!intervalId.current){
                 intervalId.current = window.setInterval(async () => {
                     const id = await chooseEndangeredCrosswalk()
@@ -205,6 +211,9 @@ const useCrosswalkLocator = (
                 clearInterval(intervalId.current);
                 intervalId.current = null;
             }
+            if (isOrientationActive) {
+                setIsOrientationActive(false);
+            }
         }
         return () => {
             setIsCrosswalkLocatorActive(false)
@@ -212,10 +221,13 @@ const useCrosswalkLocator = (
                 clearInterval(intervalId.current);
                 intervalId.current = null;
             }
+            if (isOrientationActive) {
+                setIsOrientationActive(false);
+            }
         }
 
 
-    }, [alertlevel, setCrosswalkId, chooseEndangeredCrosswalk]);
+    }, [alertlevel, setCrosswalkId, chooseEndangeredCrosswalk, isOrientationActive, setIsOrientationActive]);
 
 
     return isCrosswalkLocatorActive
