@@ -1,46 +1,84 @@
 import { usePedestrianContext } from "../context/pedestrianContext";
-
-
+import DebugPedestrian from "./DebugPedestrian";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 const PedestrianMetrics: React.FC = () => {
-
-    const context = usePedestrianContext();;
-
+    const context = usePedestrianContext();
 
     return (
-        <div>
-            <h1 className="font-bold text-2xl">Pedestrian Metrics</h1>
-            <p className="font-semibold text-xl">Alert Level: {context.alertLevel}</p>
+        <div className="grid grid-cols-2 space-y-5 space-x-5">
+            <Card className="bg-gray-200">
+                <CardHeader>
+                    <CardTitle>Alert</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>Alert active: {context.alertLevel == -1 ? "No" : "Yes"}</p>
+                    <p>Alert level: {context.alertLevel}</p>
+                </CardContent>
+            </Card>
+            <Card className="bg-gray-200">
+                <CardHeader>
+                    <CardTitle>Crosswalk</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>
+                        Crosswalk searching:{" "}
+                        {context.isCrosswalkLocatorActive ? "Yes" : "No"}
+                    </p>
+                    <p>Crosswalk ID: {context.crosswalkId}</p>
+                </CardContent>
+            </Card>
+            <Card className="bg-gray-200">
+                <CardHeader>
+                    <CardTitle>Location</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>Location active: {context.isLocationActive ? "Yes" : "No"}</p>
+                    <p>Longitude: {context.location?.longitude}</p>
+                    <p>Latitude: {context.location?.latitude}</p>
+                    <p>Accuracy: {context.location?.accuracy}</p>
+                    <p>Speed: {context.location?.speed}</p>
+                    <p>Timestamp: {context.location?.timestamp.toLocaleDateString()}</p>
+                </CardContent>
+            </Card>
+            <Card className="bg-gray-200">
+                <CardHeader>
+                    <CardTitle>Magnitude</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>Magnitude active: {context.isMagnitudeActive ? "Yes" : "No"}</p>
+                    <p>Magnitude: {context.magnitude}</p>
+                    <p>Threshold: {context.magnitudeThreshold}</p>
+                </CardContent>
+            </Card>
+            <Card className="bg-gray-200">
+                <CardHeader>
+                    <CardTitle>Orientation</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>
+                        Orientation active: {context.isOrientationActive ? "Yes" : "No"}
+                    </p>
+                    <p>Orientation angle: {context.orientation}</p>
+                </CardContent>
+            </Card>
+            <Card className="bg-gray-200">
+                <CardHeader>
+                    <CardTitle>Camera</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>Camera active: {context.isCameraActive ? "Yes" : "No"}</p>
+                    {context.cameraImage && (
+                        <img src={context.cameraImage} alt="Camera" />
+                    )}
+                </CardContent>
+            </Card>
             <div>
-                <h3>Position</h3>
-                <p>Longitude: {context.location?.longitude}</p>
-                <p>Latitude: {context.location?.latitude}</p>
-                <p>Accuracy: {context.location?.accuracy}</p>
-                <p>Speed: {context.location?.speed}</p>
-                <p>Timestamp: {context.location?.timestamp.toLocaleDateString()}</p>
-                <p>Location is active: {context.isLocationActive ? 'Yes' : 'No'}</p>
-                <button onClick={() => context.setIsLocationActive(!context.isLocationActive)}>Toggle</button>
-                <h3>Sensors</h3>
-                <p>Magnitude: {context.magnitude}</p>
-                <p>Magnitude is active: {context.isMagnitudeActive ? 'Yes' : 'No'}</p>
-                <button onClick={() => context.setIsMagnitudeActive(!context.isMagnitudeActive)}>Toggle</button>
-                <p>Magnitude threshold: {context.magnitudeThreshold}</p>
-                <p>Orientation: {context.orientation}</p>
-                <p>Orientation is active: {context.isOrientationActive ? 'Yes' : 'No'}</p>
-                <button onClick={() => context.setIsOrientationActive(!context.isOrientationActive)}>Toggle</button>
-                <h3>Camera</h3>
-                <p>Camera is active: {context.isCameraActive ? 'Yes' : 'No'}</p>
-                <button onClick={() => context.setIsCameraActive(!context.isCameraActive)}>Toggle</button>
+                {import.meta.env.DEV && <DebugPedestrian />}
                 {context.cameraImage && <img src={context.cameraImage} alt="Camera" />}
-                
-                <h3>Awareness</h3>
-                <h3>Crosswalk</h3>
-                <p>Crosswalk ID: {context.crosswalkId}</p>
             </div>
         </div>
-    )
-
-
-}
+    );
+};
 
 export default PedestrianMetrics;
