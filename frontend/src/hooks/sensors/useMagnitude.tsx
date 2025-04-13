@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { CalculateMagnitude } from "../../utils/magnitudeCalculator";
 
 
-const useMagnitude = () => {
+const useMagnitude = (magnitudeDebug : boolean) => {
     const [magnitude, setMagnitude] = useState<number>(0);
     const [isMagnitudeActive, setIsMagnitudeActive] = useState<boolean>(false);
+
 
     useEffect(() => {
         const handleMotionEvent = (event: DeviceMotionEvent) => {
@@ -16,7 +17,7 @@ const useMagnitude = () => {
             }
         }
 
-        if (window.DeviceMotionEvent && isMagnitudeActive){
+        if (window.DeviceMotionEvent && isMagnitudeActive && !magnitudeDebug) {
             window.addEventListener('devicemotion', handleMotionEvent)
         }
         else if (window.DeviceMotionEvent && !isMagnitudeActive) {
@@ -33,10 +34,10 @@ const useMagnitude = () => {
         }
 
 
-    }, [isMagnitudeActive])
+    }, [isMagnitudeActive, magnitudeDebug])
 
 
-    return {magnitude, isMagnitudeActive, setIsMagnitudeActive};
+    return {magnitude, setMagnitude, isMagnitudeActive, setIsMagnitudeActive};
     
 }
 

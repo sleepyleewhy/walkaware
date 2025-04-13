@@ -18,21 +18,33 @@ type PedestrianProviderProps = {
 const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
     children,
 }) => {
-    const { magnitude, isMagnitudeActive, setIsMagnitudeActive } = useMagnitude();
+    const [magnitudeDebug, setMagnitudeDebug] = useState<boolean>(false);
+    const { magnitude, setMagnitude, isMagnitudeActive, setIsMagnitudeActive} = useMagnitude(magnitudeDebug);
     const [magnitudeThreshold, setMagnitudeThreshold] = useState<number>(0);
-    const { orientation, isOrientationActive, setIsOrientationActive } =
-        useOrientation();
+
+    const [orientationDebug, setOrientationDebug] = useState<boolean>(false);
+    const { orientation,setOrientation, isOrientationActive, setIsOrientationActive } =
+        useOrientation(orientationDebug);
+
+    const [cameraDebug, setCameraDebug] = useState<boolean>(false);
     const {
         imageAsBase64,
+        setImageAsBase64,
         isCameraActive,
         setIsCameraActive,
         canvasRef,
-        videoRef,
-    } = useCamera();
+        videoRef
+    } = useCamera(cameraDebug);
+
     const [alertLevel, setAlertLevel] = useState<number>(-1);
-    const { location, isLocationActive, setIsLocationActive } = useLocation(alertLevel);
+
+    const [locationDebug, setLocationDebug] = useState<boolean>(false);
+    const { location, setLocation, isLocationActive, setIsLocationActive} = useLocation(alertLevel, locationDebug);
+
     const [crosswalkId, setCrosswalkId] = useState(0);
+    
     const socket = useSocketContext();
+
     const isCrosswalkDetectionActive = useCrosswalkDetection(
         socket,
         imageAsBase64,
@@ -50,28 +62,42 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
         setAlertLevel
     );
 
-    const isCrosswalkLocatorActive = useCrosswalkLocator(location, alertLevel, setCrosswalkId, orientation)
+    const isCrosswalkLocatorActive = useCrosswalkLocator(location, alertLevel, setCrosswalkId, orientation, isOrientationActive, setIsOrientationActive)
 
 
     const contextValue: PedestrianContextType = {
         location,
+        setLocation,
         isLocationActive,
         setIsLocationActive,
+        locationDebug,
+        setLocationDebug,
+
 
         magnitude,
+        setMagnitude,
         isMagnitudeActive,
         setIsMagnitudeActive,
+        magnitudeDebug,
+        setMagnitudeDebug,
 
         magnitudeThreshold,
         setMagnitudeThreshold,
 
         orientation,
+        setOrientation,
         isOrientationActive,
         setIsOrientationActive,
+        orientationDebug,
+        setOrientationDebug,
 
         cameraImage: imageAsBase64,
+        setCameraImage: setImageAsBase64,
         isCameraActive,
         setIsCameraActive,
+        cameraDebug,
+        setCameraDebug,
+
 
         alertLevel,
         setAlertLevel,

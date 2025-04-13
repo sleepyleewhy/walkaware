@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 
 
-const useCamera = (fps: number = 10) => {
+const useCamera = ( cameraDebug : boolean, fps: number = 10) => {
     const camera = useRef<MediaStream | null>(null);
     const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
     const [imageAsBase64, setImageAsBase64] = useState<string>("");
@@ -39,7 +39,7 @@ const useCamera = (fps: number = 10) => {
         }
     }
     useEffect(() => {
-        if (isCameraActive) {
+        if (isCameraActive && !cameraDebug) {
             getCameraStream();
             intervalId.current = window.setInterval(captureImage, 1000 / fps);
 
@@ -69,10 +69,10 @@ const useCamera = (fps: number = 10) => {
                 camera.current.getTracks().forEach(track => { track.stop(); });
             }
         }
-    }, [isCameraActive, fps]);
+    }, [isCameraActive, fps, cameraDebug]);
 
 
-    return { isCameraActive, setIsCameraActive, imageAsBase64, videoRef, canvasRef };
+    return { isCameraActive, setIsCameraActive, imageAsBase64, setImageAsBase64, videoRef, canvasRef};
 }
 
 export default useCamera;

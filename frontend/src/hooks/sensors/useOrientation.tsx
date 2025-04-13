@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 
 
-const useOrientation = () => {
+const useOrientation = (orientationDebug : boolean) => {
     const [orientation, setOrientation] = useState<number>(0);
     const [isOrientationActive, setIsOrientationActive] = useState<boolean>(false);
 
@@ -16,10 +16,10 @@ const useOrientation = () => {
             }
         }
 
-        if (window.DeviceOrientationEvent && isOrientationActive){
+        if (window.DeviceOrientationEvent && isOrientationActive && !orientationDebug) {
             window.addEventListener('deviceorientationabsolute', handleOrientationEvent, true)
         }
-        else if (window.DeviceOrientationEvent && !isOrientationActive) {
+        else if (window.DeviceOrientationEvent && !isOrientationActive ) {
             window.removeEventListener('deviceorientationabsolute', handleOrientationEvent, true)
         }
         else {
@@ -33,10 +33,10 @@ const useOrientation = () => {
         }
 
 
-    }, [isOrientationActive])
+    }, [isOrientationActive,orientationDebug])
 
 
-    return {orientation, isOrientationActive, setIsOrientationActive};
+    return {orientation,setOrientation, isOrientationActive, setIsOrientationActive};
     
 }
 
