@@ -27,8 +27,6 @@ const useMagnitude = (magnitudeDebug : boolean) => {
                 throw new Error("DeviceMotionEvent not available")
             }
         }
-       
-
         return () => {
             if (window.DeviceMotionEvent) {
                 window.removeEventListener('devicemotion', handleMotionEvent)

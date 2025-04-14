@@ -26,7 +26,6 @@ const useOrientation = (orientationDebug : boolean) => {
                 throw new Error("DeviceOrientationEvent not available")
             }
         }
-       
 
         return () => {
             if (window.DeviceOrientationEvent) {
