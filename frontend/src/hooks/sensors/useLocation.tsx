@@ -3,7 +3,7 @@ import { Location } from "../../models/location";
 
 
 const useLocation = (alertlevel : number, locationDebug : boolean) => {
-    const [location, setLocation] = useState<Location| null>(null);
+    const [location, setLocation] = useState<Location>({latitude: 0, longitude: 0, accuracy: 0, speed: 0, timestamp : new Date()});
     const [isLocationActive, setIsLocationActive] = useState<boolean>(false);
 
     useEffect(() => {

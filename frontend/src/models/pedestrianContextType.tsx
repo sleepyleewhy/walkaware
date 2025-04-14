@@ -3,8 +3,8 @@ import { Location } from "./location"
 import { Dispatch, SetStateAction } from "react";
 
 export type PedestrianContextType = {
-    location: Location | null,
-    setLocation: Dispatch<SetStateAction<Location | null>>,
+    location: Location,
+    setLocation: Dispatch<SetStateAction<Location>>,
     isLocationActive: boolean,
     setIsLocationActive: Dispatch<SetStateAction<boolean>>,
     locationDebug: boolean,
