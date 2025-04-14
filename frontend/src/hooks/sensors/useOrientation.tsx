@@ -15,16 +15,18 @@ const useOrientation = (orientationDebug : boolean) => {
                 throw new Error("No orientation data available")
             }
         }
-
-        if (window.DeviceOrientationEvent && isOrientationActive && !orientationDebug) {
-            window.addEventListener('deviceorientationabsolute', handleOrientationEvent, true)
+        if (!orientationDebug) {
+            if (window.DeviceOrientationEvent && isOrientationActive && !orientationDebug) {
+                window.addEventListener('deviceorientationabsolute', handleOrientationEvent, true)
+            }
+            else if (window.DeviceOrientationEvent && !isOrientationActive ) {
+                window.removeEventListener('deviceorientationabsolute', handleOrientationEvent, true)
+            }
+            else {
+                throw new Error("DeviceOrientationEvent not available")
+            }
         }
-        else if (window.DeviceOrientationEvent && !isOrientationActive ) {
-            window.removeEventListener('deviceorientationabsolute', handleOrientationEvent, true)
-        }
-        else {
-            throw new Error("DeviceOrientationEvent not available")
-        }
+       
 
         return () => {
             if (window.DeviceOrientationEvent) {

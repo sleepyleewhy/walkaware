@@ -16,16 +16,18 @@ const useMagnitude = (magnitudeDebug : boolean) => {
                 throw new Error("No acceleration data available")
             }
         }
-
-        if (window.DeviceMotionEvent && isMagnitudeActive && !magnitudeDebug) {
-            window.addEventListener('devicemotion', handleMotionEvent)
+        if (!magnitudeDebug) {
+            if (window.DeviceMotionEvent && isMagnitudeActive) {
+                window.addEventListener('devicemotion', handleMotionEvent)
+            }
+            else if (window.DeviceMotionEvent && !isMagnitudeActive) {
+                window.removeEventListener('devicemotion', handleMotionEvent)
+            }
+            else {
+                throw new Error("DeviceMotionEvent not available")
+            }
         }
-        else if (window.DeviceMotionEvent && !isMagnitudeActive) {
-            window.removeEventListener('devicemotion', handleMotionEvent)
-        }
-        else {
-            throw new Error("DeviceMotionEvent not available")
-        }
+       
 
         return () => {
             if (window.DeviceMotionEvent) {
