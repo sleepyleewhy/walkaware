@@ -22,12 +22,24 @@ const useCrosswalkLocator = (
 
     const calculateCrosswalkAngle = useCallback((crosswalkWay: CrosswalkWay) => {
         if (crosswalkWay.nodes.length < 2) return -1;
-        const startNode = crosswalkWay.nodes[0];
-        const endNode = crosswalkWay.nodes[crosswalkWay.nodes.length - 1];
-        const deltaX = endNode.lon - startNode.lon;
-        const deltaY = endNode.lat - startNode.lat;
-        const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-        return (angle + 360) % 360;
+        let sumlat = 0, sumlon = 0, sumlatlon = 0, sumlonsquare = 0;
+
+        crosswalkWay.nodes.forEach((n) => {
+            sumlat += n.lat;
+            sumlon += n.lon;
+            sumlatlon += n.lat * n.lon;
+            sumlonsquare += n.lon * n.lon;
+        })
+        const slope = (crosswalkWay.nodes.length * sumlatlon - sumlat * sumlon)/ (crosswalkWay.nodes.length * sumlonsquare - sumlon * sumlon);
+        // const startNode = crosswalkWay.nodes[0];
+        // const endNode = crosswalkWay.nodes[crosswalkWay.nodes.length - 1];
+        // const deltaX = endNode.lon - startNode.lon;
+        // const deltaY = endNode.lat - startNode.lat;
+        // const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+        const angleRadians = Math.atan(slope);
+        const angleDegrees = angleRadians * (180 / Math.PI);
+
+        return (angleDegrees+ 360) % 360;
     }, [])
 
     const filterCrosswalksByAngle = useCallback((crosswalks: CrosswalkWay[], angleThreshold: number = 20) => {
@@ -174,6 +186,16 @@ const useCrosswalkLocator = (
                 bestNodeDistance = distance;
             }
         }
+        console.log([
+            {"filteredCrosswalks" : filteredCrosswalks.current},
+            {"crosswalks" : crosswalks.current},
+            {"crosswalksNodes" : crosswalksNodes.current},
+            {"bestCrosswalk" : bestCrosswalk},
+            {"bestNode" : bestNode},
+            {"bestCrosswalkDistance" : bestCrosswalkDistance},
+            {"bestNodeDistance" : bestNodeDistance},
+        ]
+        )
 
         if (!bestCrosswalk && !bestNode) return 0;
         if (!bestCrosswalk && bestNode) return bestNode.id;
