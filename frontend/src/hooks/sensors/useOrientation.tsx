@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 
 
 
-const useOrientation = (orientationDebug : boolean) => {
+const useOrientation = (orientationDebug: boolean) => {
     const [orientation, setOrientation] = useState<number>(0);
     const [isOrientationActive, setIsOrientationActive] = useState<boolean>(false);
+
 
     useEffect(() => {
         const handleOrientationEvent = (event: DeviceOrientationEvent) => {
             if (event.alpha) {
-                setOrientation(event.alpha)
+                setOrientation(Math.abs(event.alpha - 360))
             }
             else {
                 throw new Error("No orientation data available")
@@ -19,7 +20,7 @@ const useOrientation = (orientationDebug : boolean) => {
             if (window.DeviceOrientationEvent && isOrientationActive && !orientationDebug) {
                 window.addEventListener('deviceorientationabsolute', handleOrientationEvent, true)
             }
-            else if (window.DeviceOrientationEvent && !isOrientationActive ) {
+            else if (window.DeviceOrientationEvent && !isOrientationActive) {
                 window.removeEventListener('deviceorientationabsolute', handleOrientationEvent, true)
             }
             else {
@@ -34,11 +35,11 @@ const useOrientation = (orientationDebug : boolean) => {
         }
 
 
-    }, [isOrientationActive,orientationDebug])
+    }, [isOrientationActive, orientationDebug])
 
 
-    return {orientation,setOrientation, isOrientationActive, setIsOrientationActive};
-    
+    return { orientation, setOrientation, isOrientationActive, setIsOrientationActive };
+
 }
 
 export default useOrientation;

@@ -22,31 +22,27 @@ const useCrosswalkLocator = (
 
     const calculateCrosswalkAngle = useCallback((crosswalkWay: CrosswalkWay) => {
         if (crosswalkWay.nodes.length < 2) return -1;
-        let sumlat = 0, sumlon = 0, sumlatlon = 0, sumlonsquare = 0;
+        const toRad = (degrees: number) => degrees * (Math.PI / 180);
+        const toDeg = (radians: number) => radians * (180 / Math.PI);
 
-        crosswalkWay.nodes.forEach((n) => {
-            sumlat += n.lat;
-            sumlon += n.lon;
-            sumlatlon += n.lat * n.lon;
-            sumlonsquare += n.lon * n.lon;
-        })
-        const slope = (crosswalkWay.nodes.length * sumlatlon - sumlat * sumlon)/ (crosswalkWay.nodes.length * sumlonsquare - sumlon * sumlon);
-        // const startNode = crosswalkWay.nodes[0];
-        // const endNode = crosswalkWay.nodes[crosswalkWay.nodes.length - 1];
-        // const deltaX = endNode.lon - startNode.lon;
-        // const deltaY = endNode.lat - startNode.lat;
-        // const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-        const angleRadians = Math.atan(slope);
-        const angleDegrees = angleRadians * (180 / Math.PI);
+        const startNode = crosswalkWay.nodes[0];
+        const endNode = crosswalkWay.nodes[crosswalkWay.nodes.length - 1];
+        const lat1 = toRad(startNode.lat);
+        const lat2 = toRad(endNode.lat);
+        const londelta = toRad(endNode.lon - startNode.lon);
+        const y = Math.sin(londelta) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(londelta);
+        const angle = Math.atan2(y, x);
 
-        return (angleDegrees+ 360) % 360;
+
+        return (toDeg(angle)+ 360) % 360;
     }, [])
 
     const filterCrosswalksByAngle = useCallback((crosswalks: CrosswalkWay[], angleThreshold: number = 20) => {
         return crosswalks.filter((crosswalk) => {
             if (crosswalk.angle) {
                 const angleDifference = Math.abs(crosswalk.angle - orientation);
-                if (Math.min(angleDifference, 360 - angleDifference) < angleThreshold) {
+                if (Math.min(Math.abs(angleDifference), Math.abs(180 - angleDifference)) < angleThreshold) {
                     return true;
                 }
             }
@@ -233,9 +229,9 @@ const useCrosswalkLocator = (
                 clearInterval(intervalId.current);
                 intervalId.current = null;
             }
-            if (isOrientationActive) {
-                setIsOrientationActive(false);
-            }
+            // if (isOrientationActive) {
+            //     setIsOrientationActive(false);
+            // }
         }
         return () => {
             setIsCrosswalkLocatorActive(false)
@@ -243,9 +239,9 @@ const useCrosswalkLocator = (
                 clearInterval(intervalId.current);
                 intervalId.current = null;
             }
-            if (isOrientationActive) {
-                setIsOrientationActive(false);
-            }
+            // if (isOrientationActive) {
+            //     setIsOrientationActive(false);
+            // }
         }
 
 

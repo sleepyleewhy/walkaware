@@ -23,8 +23,7 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
     const [magnitudeThreshold, setMagnitudeThreshold] = useState<number>(0);
 
     const [orientationDebug, setOrientationDebug] = useState<boolean>(false);
-    const { orientation,setOrientation, isOrientationActive, setIsOrientationActive } =
-        useOrientation(orientationDebug);
+    
 
     const [cameraDebug, setCameraDebug] = useState<boolean>(false);
     const {
@@ -40,6 +39,8 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
 
     const [locationDebug, setLocationDebug] = useState<boolean>(false);
     const { location, setLocation, isLocationActive, setIsLocationActive} = useLocation(alertLevel, locationDebug);
+    const { orientation,setOrientation, isOrientationActive, setIsOrientationActive } =
+        useOrientation(orientationDebug);
 
     const [crosswalkId, setCrosswalkId] = useState(0);
     
