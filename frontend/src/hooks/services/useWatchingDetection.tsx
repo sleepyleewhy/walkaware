@@ -52,9 +52,6 @@ const useWatchingDetection = (magnitude: number, isMagnitudeActive: boolean, set
             }
         }
         else {
-            if (isMagnitudeActive) {
-                setIsMagnitudeActive(false);
-            }
             setIsWatchingDetectionActive(false);
         }
     }, [alertLevel, isMagnitudeActive, magnitudeThreshold, setAlertLevel, setIsMagnitudeActive, magnitudeAverage])
