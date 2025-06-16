@@ -4,7 +4,7 @@ import cv2
 
 from ultralytics import YOLO
 
-model = YOLO("./crosswalk-detection-model/best.pt")
+model = YOLO("best.pt")
 
 
 def base64_to_image(base64_string):
