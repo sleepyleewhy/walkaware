@@ -5,6 +5,10 @@ COPY package.json package-lock.json ./
 
 RUN npm install
 COPY . .
+
+ARG VITE_API_URL=="wss://api.walkaware.eu"
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
 
