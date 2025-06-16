@@ -5,10 +5,15 @@ import { Button } from "@/components/ui/button";
 const Home : React.FC = () => {
     const navigate = useNavigate();
     return (
-        <div>
-            <h1>Home Page</h1>
-            <Button onClick={() => navigate('/pedestrian')}>Pedestrian Page</Button>
-        </div>
+            <>
+            <h1 className="text-5xl font-extrabold mb-10">Choose Mode</h1>
+            <div className="flex items-center">
+            <Button className="mr-4"onClick={() => navigate('/pedestrian')}>Pedestrian Mode</Button>
+            <Button  className="">Driver Mode</Button>
+            </div>
+            </>
+            
+
     )
 }
 

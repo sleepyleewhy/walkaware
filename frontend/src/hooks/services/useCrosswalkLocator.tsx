@@ -7,7 +7,10 @@ const useCrosswalkLocator = (
     location: Location | null,
     alertlevel: number,
     setCrosswalkId : React.Dispatch<SetStateAction<number>>,
-    orientation: number) => {
+    orientation: number,
+    isOrientationActive: boolean,
+    setIsOrientationActive: React.Dispatch<SetStateAction<boolean>>,
+    ) => {
 
 
     const crosswalks = useRef<CrosswalkWay[]>([]);
@@ -19,19 +22,27 @@ const useCrosswalkLocator = (
 
     const calculateCrosswalkAngle = useCallback((crosswalkWay: CrosswalkWay) => {
         if (crosswalkWay.nodes.length < 2) return -1;
+        const toRad = (degrees: number) => degrees * (Math.PI / 180);
+        const toDeg = (radians: number) => radians * (180 / Math.PI);
+
         const startNode = crosswalkWay.nodes[0];
         const endNode = crosswalkWay.nodes[crosswalkWay.nodes.length - 1];
-        const deltaX = endNode.lon - startNode.lon;
-        const deltaY = endNode.lat - startNode.lat;
-        const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-        return (angle + 360) % 360;
+        const lat1 = toRad(startNode.lat);
+        const lat2 = toRad(endNode.lat);
+        const londelta = toRad(endNode.lon - startNode.lon);
+        const y = Math.sin(londelta) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(londelta);
+        const angle = Math.atan2(y, x);
+
+
+        return (toDeg(angle)+ 360) % 360;
     }, [])
 
     const filterCrosswalksByAngle = useCallback((crosswalks: CrosswalkWay[], angleThreshold: number = 20) => {
         return crosswalks.filter((crosswalk) => {
             if (crosswalk.angle) {
                 const angleDifference = Math.abs(crosswalk.angle - orientation);
-                if (Math.min(angleDifference, 360 - angleDifference) < angleThreshold) {
+                if (Math.min(Math.abs(angleDifference), Math.abs(180 - angleDifference)) < angleThreshold) {
                     return true;
                 }
             }
@@ -171,6 +182,16 @@ const useCrosswalkLocator = (
                 bestNodeDistance = distance;
             }
         }
+        console.log([
+            {"filteredCrosswalks" : filteredCrosswalks.current},
+            {"crosswalks" : crosswalks.current},
+            {"crosswalksNodes" : crosswalksNodes.current},
+            {"bestCrosswalk" : bestCrosswalk},
+            {"bestNode" : bestNode},
+            {"bestCrosswalkDistance" : bestCrosswalkDistance},
+            {"bestNodeDistance" : bestNodeDistance},
+        ]
+        )
 
         if (!bestCrosswalk && !bestNode) return 0;
         if (!bestCrosswalk && bestNode) return bestNode.id;
@@ -189,8 +210,11 @@ const useCrosswalkLocator = (
 
     useEffect(() => {
         
-        if (alertlevel >= 1) {
+        if (alertlevel >= 2) {
             setIsCrosswalkLocatorActive(true)
+            if (!isOrientationActive) {
+                setIsOrientationActive(true);
+            }
             if (!intervalId.current){
                 intervalId.current = window.setInterval(async () => {
                     const id = await chooseEndangeredCrosswalk()
@@ -205,6 +229,9 @@ const useCrosswalkLocator = (
                 clearInterval(intervalId.current);
                 intervalId.current = null;
             }
+            // if (isOrientationActive) {
+            //     setIsOrientationActive(false);
+            // }
         }
         return () => {
             setIsCrosswalkLocatorActive(false)
@@ -212,10 +239,13 @@ const useCrosswalkLocator = (
                 clearInterval(intervalId.current);
                 intervalId.current = null;
             }
+            // if (isOrientationActive) {
+            //     setIsOrientationActive(false);
+            // }
         }
 
 
-    }, [alertlevel, setCrosswalkId, chooseEndangeredCrosswalk]);
+    }, [alertlevel, setCrosswalkId, chooseEndangeredCrosswalk, isOrientationActive, setIsOrientationActive]);
 
 
     return isCrosswalkLocatorActive

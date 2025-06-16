@@ -2,28 +2,30 @@ import { useEffect, useState } from "react";
 
 
 
-const useOrientation = () => {
+const useOrientation = (orientationDebug: boolean) => {
     const [orientation, setOrientation] = useState<number>(0);
     const [isOrientationActive, setIsOrientationActive] = useState<boolean>(false);
+
 
     useEffect(() => {
         const handleOrientationEvent = (event: DeviceOrientationEvent) => {
             if (event.alpha) {
-                setOrientation(event.alpha)
+                setOrientation(Math.abs(event.alpha - 360))
             }
             else {
                 throw new Error("No orientation data available")
             }
         }
-
-        if (window.DeviceOrientationEvent && isOrientationActive){
-            window.addEventListener('deviceorientationabsolute', handleOrientationEvent, true)
-        }
-        else if (window.DeviceOrientationEvent && !isOrientationActive) {
-            window.removeEventListener('deviceorientationabsolute', handleOrientationEvent, true)
-        }
-        else {
-            throw new Error("DeviceOrientationEvent not available")
+        if (!orientationDebug) {
+            if (window.DeviceOrientationEvent && isOrientationActive && !orientationDebug) {
+                window.addEventListener('deviceorientationabsolute', handleOrientationEvent, true)
+            }
+            else if (window.DeviceOrientationEvent && !isOrientationActive) {
+                window.removeEventListener('deviceorientationabsolute', handleOrientationEvent, true)
+            }
+            else {
+                throw new Error("DeviceOrientationEvent not available")
+            }
         }
 
         return () => {
@@ -33,11 +35,11 @@ const useOrientation = () => {
         }
 
 
-    }, [isOrientationActive])
+    }, [isOrientationActive, orientationDebug])
 
 
-    return {orientation, isOrientationActive, setIsOrientationActive};
-    
+    return { orientation, setOrientation, isOrientationActive, setIsOrientationActive };
+
 }
 
 export default useOrientation;
