@@ -1,8 +1,8 @@
-import { usePedestrianContext } from "../context/pedestrianContext";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { usePedestrianContext } from "../../context/pedestrianContext";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../ui/card";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 
 const PedestrianMetrics: React.FC = () => {
     const context = usePedestrianContext();

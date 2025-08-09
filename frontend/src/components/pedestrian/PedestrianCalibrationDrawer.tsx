@@ -8,10 +8,10 @@ import {
     DrawerTitle,
     DrawerTrigger,
 } from "@/components/ui/drawer"
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import { usePedestrianContext } from "@/context/pedestrianContext";
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../ui/card";
 import { toast } from "sonner";
 
 
