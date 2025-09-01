@@ -22,8 +22,8 @@ const defaultContext : DriverContextType = {
     setAlertLevel: () => {},
     relevantCrosswalks: [],
     setRelevantCrosswalks: () => {},
-    dangeredCrosswalksId: [],
-    setDangeredCrosswalksId: () => {}
+    dangeredCrosswalks: [],
+    setDangeredCrosswalks: () => {}
 }
 
 export const DriverContext = createContext<DriverContextType>(defaultContext);

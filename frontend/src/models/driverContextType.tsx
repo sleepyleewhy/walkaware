@@ -17,6 +17,6 @@ export type DriverContextType = {
     relevantCrosswalks: CrosswalkCoordinates[],
     setRelevantCrosswalks: Dispatch<SetStateAction<CrosswalkCoordinates[]>>,
 
-    dangeredCrosswalksId: number[],
-    setDangeredCrosswalksId: Dispatch<SetStateAction<number[]>>
+    dangeredCrosswalks: CrosswalkCoordinates[],
+    setDangeredCrosswalks: Dispatch<SetStateAction<CrosswalkCoordinates[]>>
 }
