@@ -1,4 +1,5 @@
 
+import { CrosswalkCoordinates } from "./crosswalkCoordinates";
 import { Location } from "./location"
 import { Dispatch, SetStateAction } from "react";
 
@@ -13,6 +14,9 @@ export type DriverContextType = {
     alertLevel: number,
     setAlertLevel: Dispatch<SetStateAction<number>>,
     
+    relevantCrosswalks: CrosswalkCoordinates[],
+    setRelevantCrosswalks: Dispatch<SetStateAction<CrosswalkCoordinates[]>>,
+
     dangeredCrosswalksId: number[],
     setDangeredCrosswalksId: Dispatch<SetStateAction<number[]>>
 }

@@ -20,6 +20,8 @@ const defaultContext : DriverContextType = {
     setLocationDebug: () => {},
     alertLevel: 0,
     setAlertLevel: () => {},
+    relevantCrosswalks: [],
+    setRelevantCrosswalks: () => {},
     dangeredCrosswalksId: [],
     setDangeredCrosswalksId: () => {}
 }

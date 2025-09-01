@@ -165,7 +165,8 @@ const useCrosswalkLocator = (
         try {
             const response = await fetchCrosswalks(location, true)
                 crosswalks.current = response.crosswalkWays;
-                crosswalksNodes.current = response.aloneNodes;
+
+                crosswalksNodes.current = response.crosswalkNodes.filter(node => node.isAlone);
                 filteredCrosswalks.current = filterCrosswalksByAngle(crosswalks.current);
             
         }
