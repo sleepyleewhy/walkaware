@@ -9,7 +9,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
 
     const isCrosswalkDetectionActive = alertLevel >= 1;
     const noCrosswalkCounter = useRef(0);
-    const username = localStorage.getItem("username");
+    const user_guid = localStorage.getItem("user_guid");
     const intervalId = useRef<number | null>(null);
     const imageRef = useRef(imageAsBase64);
 
@@ -19,7 +19,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
 
 
     useEffect(() => {
-        socket.on("predict_result_" + username, (data) => {
+        socket.on("predict_result_" + user_guid, (data) => {
             if (alertLevel >=1){
                 if (data === true) {
                     noCrosswalkCounter.current = 0;
@@ -39,7 +39,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
             }
 
         });
-    },[socket, alertLevel, username, setAlertLevel] )
+    },[socket, alertLevel, user_guid, setAlertLevel] )
 
 
     useEffect(() => {
@@ -51,7 +51,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
                 intervalId.current = window.setInterval(() => {
 
                     if (imageRef.current != "") {
-                        socket.emit("predict", username, imageRef.current);
+                        socket.emit("predict", user_guid, imageRef.current);
                     }
                 }, 1000 / 5);
             }
@@ -61,7 +61,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
             if (isCameraActive) {
                 setIsCameraActive(false);
             }
-            socket.off("predict_result_" + username);
+            socket.off("predict_result_" + user_guid);
             if (intervalId.current) {
                 clearInterval(intervalId.current);
                 intervalId.current = null;
@@ -69,7 +69,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
         }
 
 
-    }, [alertLevel, imageAsBase64, socket, setAlertLevel, username, isCameraActive, setIsCameraActive]);
+    }, [alertLevel, imageAsBase64, socket, setAlertLevel, user_guid, isCameraActive, setIsCameraActive]);
     return isCrosswalkDetectionActive
 
 

@@ -10,6 +10,7 @@ import useCrosswalkDetection from "../hooks/services/useCrosswalkDetection";
 import { useSocketContext } from "./socketContext";
 import useWatchingDetection from "../hooks/services/useWatchingDetection";
 import useCrosswalkLocator from "@/hooks/services/useCrosswalkLocator";
+import usePedestrianCommunicator from "@/hooks/services/usePedestrianCommunicator";
 
 type PedestrianProviderProps = {
     children: ReactNode;
@@ -64,6 +65,8 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
     );
 
     const isCrosswalkLocatorActive = useCrosswalkLocator(location, alertLevel, setCrosswalkId, orientation, isOrientationActive, setIsOrientationActive)
+    
+    usePedestrianCommunicator(crosswalkId, socket, alertLevel, setAlertLevel);
 
 
     const contextValue: PedestrianContextType = {

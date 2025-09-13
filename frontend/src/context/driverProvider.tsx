@@ -24,6 +24,7 @@ const DriverProvider : React.FC<DriverProviderProps> = ({ children }) => {
     useRelevantCrosswalkSearcher(location, alertLevel, setAlertLevel, setRelevantCrosswalks);
     useCrosswalkDistanceWatcher(alertLevel, setAlertLevel, relevantCrosswalks, setDangeredCrosswalks, location)
 
+
     const contextValue: DriverContextType = {
         location,
         setLocation,
