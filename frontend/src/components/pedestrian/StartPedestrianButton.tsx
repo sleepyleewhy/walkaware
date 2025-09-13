@@ -1,5 +1,5 @@
 import { usePedestrianContext } from "@/context/pedestrianContext"
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 
 const StartPedestrianButton  : React.FC = () => {
     const context = usePedestrianContext();

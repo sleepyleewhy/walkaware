@@ -1,6 +1,7 @@
 import { CrosswalkNode } from "@/models/crosswalkNode";
 import { CrosswalkWay } from "@/models/crosswalkWay";
 import { Location } from "@/models/location";
+import { fetchCrosswalks } from "@/utils/CrosswalkLocation";
 import { SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 
 const useCrosswalkLocator = (
@@ -20,23 +21,23 @@ const useCrosswalkLocator = (
     const intervalId = useRef<number | null>(null);
 
 
-    const calculateCrosswalkAngle = useCallback((crosswalkWay: CrosswalkWay) => {
-        if (crosswalkWay.nodes.length < 2) return -1;
-        const toRad = (degrees: number) => degrees * (Math.PI / 180);
-        const toDeg = (radians: number) => radians * (180 / Math.PI);
+    // const calculateCrosswalkAngle = useCallback((crosswalkWay: CrosswalkWay) => {
+    //     if (crosswalkWay.nodes.length < 2) return -1;
+    //     const toRad = (degrees: number) => degrees * (Math.PI / 180);
+    //     const toDeg = (radians: number) => radians * (180 / Math.PI);
 
-        const startNode = crosswalkWay.nodes[0];
-        const endNode = crosswalkWay.nodes[crosswalkWay.nodes.length - 1];
-        const lat1 = toRad(startNode.lat);
-        const lat2 = toRad(endNode.lat);
-        const londelta = toRad(endNode.lon - startNode.lon);
-        const y = Math.sin(londelta) * Math.cos(lat2);
-        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(londelta);
-        const angle = Math.atan2(y, x);
+    //     const startNode = crosswalkWay.nodes[0];
+    //     const endNode = crosswalkWay.nodes[crosswalkWay.nodes.length - 1];
+    //     const lat1 = toRad(startNode.lat);
+    //     const lat2 = toRad(endNode.lat);
+    //     const londelta = toRad(endNode.lon - startNode.lon);
+    //     const y = Math.sin(londelta) * Math.cos(lat2);
+    //     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(londelta);
+    //     const angle = Math.atan2(y, x);
 
 
-        return (toDeg(angle)+ 360) % 360;
-    }, [])
+    //     return (toDeg(angle)+ 360) % 360;
+    // }, [])
 
     const filterCrosswalksByAngle = useCallback((crosswalks: CrosswalkWay[], angleThreshold: number = 20) => {
         return crosswalks.filter((crosswalk) => {
@@ -49,9 +50,9 @@ const useCrosswalkLocator = (
             return false;
         })
     }, [orientation])
-    const filterNodesByAlone = (crosswalksNodes: CrosswalkNode[]) => {
-        return crosswalksNodes.filter((crosswalkNode) => crosswalkNode.isAlone);
-    }
+    // const filterNodesByAlone = (crosswalksNodes: CrosswalkNode[]) => {
+    //     return crosswalksNodes.filter((crosswalkNode) => crosswalkNode.isAlone);
+    // }
 
     
 
@@ -95,6 +96,66 @@ const useCrosswalkLocator = (
 
     // Fetch crosswalks from Overpass API
     // This function fetches crosswalks from the Overpass API based on the user's location
+    // const getCrosswalksNearby = useCallback(async () => {
+    //     if (!location) return;
+    //     if (location.accuracy > 500) {
+    //         console.log('accuracy too low')
+    //         throw new Error("Location accuracy is too low");
+    //     }
+    //     try {
+    //         const response = await fetch("https://overpass.private.coffee/api/interpreter",
+    //             {
+    //                 method: "POST",
+    //                 body: `data= ${encodeURIComponent(`
+    //                     [out:json];
+    //                     (
+    //                         way["highway"="footway"]["footway"="crossing"](around:${location.accuracy}, ${location.latitude}, ${location.longitude});
+    //                         node["highway"="crossing"]["crossing:markings"="zebra"](around:${location.accuracy}, ${location.latitude}, ${location.longitude});
+    //                     );
+    //                     out body;
+    //                     >;
+    //                     out skel qt;
+    //                     `)}`
+    //             }
+    //         ).then((res) => res.json())
+
+    //         const allCrosswalksNodes = response.elements
+    //             .filter((element: { type: string }) => element.type === 'node')
+    //             .map((element: { id: number; lat: number; lon: number }) => {
+    //                 const crosswalkNode: CrosswalkNode = {
+    //                     id: element.id,
+    //                     lon: element.lon,
+    //                     lat: element.lat,
+    //                     isAlone: true
+    //                 };
+    //                 return crosswalkNode;
+    //             })
+    //         crosswalks.current = response.elements
+    //             .filter((element: { type: string }) => element.type === 'way')
+    //             .map((element: { id: number, nodes: number[] }) => {
+    //                 const crosswalkWay: CrosswalkWay = {
+    //                     id: element.id,
+    //                     nodes: element.nodes.map((nodeId: number) => {
+    //                         const node = allCrosswalksNodes.find((node: CrosswalkNode) => node.id === nodeId)
+    //                         if (node) {
+    //                             node.isAlone = false;
+    //                             return node;
+    //                         } else {
+    //                             throw new Error(`Node with id ${nodeId} not found`);
+    //                         }
+    //                     }),
+    //                 };
+    //                 crosswalkWay.angle = calculateCrosswalkAngle(crosswalkWay);
+    //                 return crosswalkWay;
+    //             });
+    //         filteredCrosswalks.current = filterCrosswalksByAngle(crosswalks.current);
+    //         crosswalksNodes.current = filterNodesByAlone(allCrosswalksNodes);
+    //     } catch (err) {
+    //         console.error("Error fetching crosswalks:", err);
+    //     }
+    // }, [location, filterCrosswalksByAngle, calculateCrosswalkAngle])
+
+
     const getCrosswalksNearby = useCallback(async () => {
         if (!location) return;
         if (location.accuracy > 500) {
@@ -102,57 +163,18 @@ const useCrosswalkLocator = (
             throw new Error("Location accuracy is too low");
         }
         try {
-            const response = await fetch("https://overpass.private.coffee/api/interpreter",
-                {
-                    method: "POST",
-                    body: `data= ${encodeURIComponent(`
-                        [out:json];
-                        (
-                            way["highway"="footway"]["footway"="crossing"](around:${location.accuracy}, ${location.latitude}, ${location.longitude});
-                            node["highway"="crossing"]["crossing:markings"="zebra"](around:${location.accuracy}, ${location.latitude}, ${location.longitude});
-                        );
-                        out body;
-                        >;
-                        out skel qt;
-                        `)}`
-                }
-            ).then((res) => res.json())
+            const response = await fetchCrosswalks(location, true)
+                crosswalks.current = response.crosswalkWays;
 
-            const allCrosswalksNodes = response.elements
-                .filter((element: { type: string }) => element.type === 'node')
-                .map((element: { id: number; lat: number; lon: number }) => {
-                    const crosswalkNode: CrosswalkNode = {
-                        id: element.id,
-                        lon: element.lon,
-                        lat: element.lat,
-                        isAlone: true
-                    };
-                    return crosswalkNode;
-                })
-            crosswalks.current = response.elements
-                .filter((element: { type: string }) => element.type === 'way')
-                .map((element: { id: number, nodes: number[] }) => {
-                    const crosswalkWay: CrosswalkWay = {
-                        id: element.id,
-                        nodes: element.nodes.map((nodeId: number) => {
-                            const node = allCrosswalksNodes.find((node: CrosswalkNode) => node.id === nodeId)
-                            if (node) {
-                                node.isAlone = false;
-                                return node;
-                            } else {
-                                throw new Error(`Node with id ${nodeId} not found`);
-                            }
-                        }),
-                    };
-                    crosswalkWay.angle = calculateCrosswalkAngle(crosswalkWay);
-                    return crosswalkWay;
-                });
-            filteredCrosswalks.current = filterCrosswalksByAngle(crosswalks.current);
-            crosswalksNodes.current = filterNodesByAlone(allCrosswalksNodes);
-        } catch (err) {
+                crosswalksNodes.current = response.crosswalkNodes.filter(node => node.isAlone);
+                filteredCrosswalks.current = filterCrosswalksByAngle(crosswalks.current);
+            
+        }
+        catch (err) {
             console.error("Error fetching crosswalks:", err);
         }
-    }, [location, filterCrosswalksByAngle, calculateCrosswalkAngle])
+    },[location, filterCrosswalksByAngle])
+
 
     const chooseEndangeredCrosswalk = useCallback(async () => {
         try {

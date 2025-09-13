@@ -1,8 +1,8 @@
 
-import PedestrianMetrics from "../../components/PedestrianMetrics";
+import PedestrianMetrics from "../../components/pedestrian/PedestrianMetrics";
 import PedestrianProvider from "../../context/pedestrianProvider";
-import PedestrianCalibrationDrawer from "@/components/PedestrianCalibrationDrawer";
-import StartPedestrianButton from "@/components/StartPedestrianButton";
+import PedestrianCalibrationDrawer from "@/components/pedestrian/PedestrianCalibrationDrawer";
+import StartPedestrianButton from "@/components/pedestrian/StartPedestrianButton";
 const PedestrianPage: React.FC = () => {
 
 

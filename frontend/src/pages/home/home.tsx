@@ -9,7 +9,7 @@ const Home : React.FC = () => {
             <h1 className="text-5xl font-extrabold mb-10">Choose Mode</h1>
             <div className="flex items-center">
             <Button className="mr-4"onClick={() => navigate('/pedestrian')}>Pedestrian Mode</Button>
-            <Button  className="">Driver Mode</Button>
+            <Button  className="" onClick={() => navigate('/driver')}>Driver Mode</Button>
             </div>
             </>
             
