@@ -1,5 +1,5 @@
 import DriverMetrics from "@/components/driver/DriverMetrics";
-import StartDriverButton from "@/components/pedestrian/StartDriverButton";
+import StartDriverButton from "@/components/driver/StartDriverButton";
 import DriverProvider from "@/context/driverProvider";
 
 const DriverPage: React.FC = () => {

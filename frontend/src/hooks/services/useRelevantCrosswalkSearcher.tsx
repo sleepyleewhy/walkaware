@@ -52,7 +52,7 @@ const useRelevantCrosswalkSearcher = (
                 const relevantCrosswalks = new Set<CrosswalkCoordinates>(); 
                 for (let i = 1; i < data.durations[0].length; i++) {
                     if (data.durations[0][i] <= MAX_DURATION){
-                        relevantCrosswalks.add(crosswalksCoordinates[i]);
+                        relevantCrosswalks.add(crosswalksCoordinates[i - 1]);
                     }
                 }
                 if (relevantCrosswalks.size > 0) {

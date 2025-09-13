@@ -43,7 +43,7 @@ const crosswalkWays: CrosswalkWay[] = response.elements
         const minlat = firstPoint.lat;
         const maxlat = lastPoint.lat;
         const minlon = firstPoint.lon;
-        const maxlon = lastPoint.lon
+        const maxlon = lastPoint.lon;
 
         nodesForWay.forEach(node => node.isAlone = false);
 
@@ -81,6 +81,6 @@ const calculateCrosswalkAngle = (crosswalkWay: CrosswalkWay) => {
     const angle = Math.atan2(y, x);
 
 
-    return (toDeg(angle)+ 360) % 360;
+    return (toDeg(angle) + 360) % 360;
 }
 
