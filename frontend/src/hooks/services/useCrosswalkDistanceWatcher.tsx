@@ -39,16 +39,15 @@ const useCrosswalkDistanceWatcher = (
         if (alertlevel >= 2 && !intervalId.current) {
             intervalId.current = setInterval(() => {
                 if (relevantCrosswalks.length > 0 && location != null) {
-                    const dangeredCrosswalks = relevantCrosswalks.filter(crosswalk => {
-                        const distance = calculateDistance(
+                    relevantCrosswalks.forEach(cw => {
+                        cw.distance = calculateDistance(
                             location.latitude,
                             location.longitude,
-                            crosswalk.lat,
-                            crosswalk.lon
+                            cw.lat,
+                            cw.lon
                         );
-                        console.log("Distance to crosswalk: ", distance);
-                        return distance < DANGERED_THRESHOLD;
-                    });
+                    })
+                    const dangeredCrosswalks = relevantCrosswalks.filter(cw => (cw.distance ?? Infinity) <= DANGERED_THRESHOLD);
                     if (dangeredCrosswalks.length > 0) {
                         setAlertLevel(3);
                     }
