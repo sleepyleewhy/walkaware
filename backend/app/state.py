@@ -10,7 +10,6 @@ DRIVER_PRESENCE_TTL = 3.0
 PED_PRESENCE_TTL = 15.0
 PRUNE_LOOP_INTERVAL = 1.0
 
-
-CROSSWALKS: Dict[int, Dict[str, Any]] = {}
-SUBSCRIPTIONS: Dict[str, Set[int]] = {}
-ROLE: Dict[str, str] = {}
+CROSSWALKS: Dict[int, Dict[str, Any]] = {} # crosswalk_id -> {peds: set(sid), drivers: {sid: {distance, ts}}, last_broadcast: {}}
+SUBSCRIPTIONS: Dict[str, Set[int]] = {} # sid -> set(crosswalk_id)
+ROLE: Dict[str, str] = {} # sid -> role
