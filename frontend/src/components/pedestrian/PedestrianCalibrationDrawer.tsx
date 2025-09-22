@@ -84,6 +84,12 @@ const PedestrianCalibrationDrawer: React.FC = () => {
             }
         }, 20000);
     }
+    const setDebugValues = () => {
+        watchingAverage.current = 12;
+        notWatchingAverage.current = 1;
+        context.setMagnitudeThreshold((watchingAverage.current + notWatchingAverage.current) / 2);
+        toast("Debug values set, you can now close the drawer.");
+    }
 
 
 
@@ -135,6 +141,7 @@ const PedestrianCalibrationDrawer: React.FC = () => {
                 <DrawerFooter>
                     <Button onClick={() => StartCalibrating()} disabled={isCalibrating == true}>Start Calibrating</Button>
                     <Button onClick={() => resetCalibration()} disabled={isCalibrating == true}>Reset Calibration</Button>
+                    <Button onClick={() => setDebugValues()}>Use Debug values</Button>
                     <DrawerClose>
                         <Button variant="outline" onClick={() => calibratingCanceled()}>Close</Button>
                     </DrawerClose>

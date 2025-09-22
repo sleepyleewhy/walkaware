@@ -6,6 +6,8 @@ import useAccuracyChecker from "@/hooks/services/useAccuracyChecker";
 import useRelevantCrosswalkSearcher from "@/hooks/services/useRelevantCrosswalkSearcher";
 import { CrosswalkCoordinates } from "@/models/crosswalkCoordinates";
 import useCrosswalkDistanceWatcher from "@/hooks/services/useCrosswalkDistanceWatcher";
+import useDriverCommuncicator from "@/hooks/services/useDriverCommunicator";
+import { socket } from "./socketContext";
 
 
 type DriverProviderProps = {
@@ -23,6 +25,7 @@ const DriverProvider : React.FC<DriverProviderProps> = ({ children }) => {
     useAccuracyChecker(location, alertLevel, setAlertLevel);
     useRelevantCrosswalkSearcher(location, alertLevel, setAlertLevel, setRelevantCrosswalks);
     useCrosswalkDistanceWatcher(alertLevel, setAlertLevel, relevantCrosswalks, setDangeredCrosswalks, location)
+    useDriverCommuncicator(dangeredCrosswalks, socket, alertLevel, setAlertLevel)
 
     const contextValue: DriverContextType = {
         location,
