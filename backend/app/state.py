@@ -13,3 +13,4 @@ PRUNE_LOOP_INTERVAL = 1.0
 CROSSWALKS: Dict[int, Dict[str, Any]] = {} # crosswalk_id -> {peds: set(sid), drivers: {sid: {distance, ts}}, last_broadcast: {}}
 SUBSCRIPTIONS: Dict[str, Set[int]] = {} # sid -> set(crosswalk_id)
 ROLE: Dict[str, str] = {} # sid -> role
+RUNNING_TASKS = set()
