@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backend Handlers Test</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .logs { border: 1px solid #333; height: 320px; overflow-y: scroll; padding: 10px; background: #f5f5f5; font-family: monospace; }
+        button { margin: 4px; padding: 8px 10px; }
+        input { margin: 4px; padding: 6px; width: 90px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        .row { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+    </style>
+</head>
+<body>
+    <h1>Backend Handlers Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>Connection Status</h2>
+        <div id="connection-status">Disconnected</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Parameters</h2>
+        <div class="row">
+            <label>Crosswalk ID:
+                <input id="cw" type="number" value="1" />
+            </label>
+            <label>Distance:
+                <input id="dist" type="number" value="10" />
+            </label>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <div class="row">
+            <button onclick="testPedEnter()">Ped Enter</button>
+            <button onclick="testPedLeave()">Ped Leave</button>
+            <button onclick="testDriverEnter()">Driver Enter</button>
+            <button onclick="testDriverUpdate()">Driver Update</button>
+            <button onclick="testDriverLeave()">Driver Leave</button>
+            <button onclick="quickTest()">Quick Alert Test</button>
+            <button onclick="fullCycle()">Full Cycle (Ped + Driver + Updates + Leave)</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Logs</h2>
+        <div id="logs" class="logs"></div>
+    </div>
+
+    <script>
+        function cwId(){ return parseInt(document.getElementById('cw').value || '1'); }
+        function dist(){ return parseFloat(document.getElementById('dist').value || '10'); }
+
+        const socket = io('http://localhost:8000', {
+            path: '/ws/socket.io',
+            transports: ['websocket']
+        });
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('logs');
+            const logEntry = `<div class="${type}">[${timestamp}] ${message}</div>`;
+            logDiv.insertAdjacentHTML('beforeend', logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            (type === 'error' ? console.error : console.log)(message);
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusDiv = document.getElementById('connection-status');
+            statusDiv.textContent = connected ? `Connected (${socket.id})` : 'Disconnected';
+            statusDiv.style.color = connected ? 'green' : 'red';
+        }
+
+        socket.on('connect', () => {
+            log(`Connected! Socket ID: ${socket.id}`, 'success');
+            updateConnectionStatus(true);
+        });
+
+        socket.on('disconnect', (reason) => {
+            log(`Disconnected: ${reason}`, 'error');
+            updateConnectionStatus(false);
+        });
+
+        socket.on('connect_error', (error) => {
+            log(`Connection failed: ${error.message}`, 'error');
+            updateConnectionStatus(false);
+        });
+
+        // Server events
+        socket.on('driver_critical', (data) => log(`driver_critical: ${JSON.stringify(data)}`, 'error'));
+        socket.on('ped_critical', (data) => log(`ped_critical: ${JSON.stringify(data)}`, 'warning'));
+        socket.on('presence', (data) => log(`presence: ${JSON.stringify(data)}`, 'info'));
+        socket.on('alert_end', (data) => log(`alert_end: ${JSON.stringify(data)}`, 'success'));
+        socket.on('error', (data) => log(`SERVER error event: ${JSON.stringify(data)}`, 'error'));
+
+        function ensureConn() {
+            if (!socket.connected) {
+                log('Not connected!', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        // Ped events
+        function testPedEnter() {
+            if (!ensureConn()) return;
+            socket.emit('ped_enter', { crosswalk_id: cwId() });
+            log(`Sent ped_enter (cw=${cwId()})`);
+        }
+
+        function testPedLeave() {
+            if (!ensureConn()) return;
+            socket.emit('ped_leave', { crosswalk_id: cwId() });
+            log(`Sent ped_leave (cw=${cwId()})`);
+        }
+
+        // Driver events
+        function testDriverEnter() {
+            if (!ensureConn()) return;
+            socket.emit('driver_enter', { crosswalk_id: cwId(), distance: dist() });
+            log(`Sent driver_enter (cw=${cwId()}, distance=${dist()})`);
+        }
+
+        function testDriverUpdate() {
+            if (!ensureConn()) return;
+            socket.emit('driver_update', { crosswalk_id: cwId(), distance: dist() });
+            log(`Sent driver_update (cw=${cwId()}, distance=${dist()})`);
+        }
+
+        function testDriverLeave() {
+            if (!ensureConn()) return;
+            socket.emit('driver_leave', { crosswalk_id: cwId() });
+            log(`Sent driver_leave (cw=${cwId()})`);
+        }
+
+        async function quickTest() {
+            if (!ensureConn()) return;
+            log('Quick test start');
+            socket.emit('ped_enter', { crosswalk_id: cwId() });
+            await sleep(600);
+            socket.emit('driver_enter', { crosswalk_id: cwId(), distance: 8 });
+            await sleep(1200);
+            socket.emit('driver_update', { crosswalk_id: cwId(), distance: 6 });
+            await sleep(1200);
+            socket.emit('ped_leave', { crosswalk_id: cwId() });
+            socket.emit('driver_leave', { crosswalk_id: cwId() });
+            log('Quick test end', 'success');
+        }
+
+        async function fullCycle() {
+            if (!ensureConn()) return;
+            const id = cwId();
+            log(`Full cycle start (cw=${id})`);
+            socket.emit('ped_enter', { crosswalk_id: id });
+            await sleep(400);
+            socket.emit('driver_enter', { crosswalk_id: id, distance: dist() });
+            await sleep(500);
+            socket.emit('driver_update', { crosswalk_id: id, distance: dist() - 2 });
+            await sleep(500);
+            socket.emit('driver_update', { crosswalk_id: id, distance: dist() - 4 });
+            await sleep(700);
+            socket.emit('ped_leave', { crosswalk_id: id });
+            await sleep(300);
+            socket.emit('driver_leave', { crosswalk_id: id });
+            log('Full cycle end', 'success');
+        }
+
+        function clearLogs() { document.getElementById('logs').innerHTML = ''; }
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        log('Initializing Socket.IO client...');
+    </script>
+</body>
+</html>
