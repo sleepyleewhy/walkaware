@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from backend.app.prune import register_prune
+from fastapi.responses import FileResponse
+from app.prune import register_prune
 from sockets import sio_app
+import app.handlers
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,4 +20,8 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-app.mount('/', app=sio_app)  # Consider using a subpath like '/ws'
+@app.get("/test")
+async def get_test():
+    return FileResponse("test_handlers.html")
+
+app.mount('/', app=sio_app)
