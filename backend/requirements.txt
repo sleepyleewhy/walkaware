@@ -3,3 +3,4 @@ opencv-contrib-python-headless==4.11.0.86
 fastapi[standard]
 numpy==2.1.1
 python-socketio==5.12.1
+google-cloud-firestore
