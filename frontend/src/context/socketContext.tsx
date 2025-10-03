@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 import { io, Socket } from "socket.io-client";
 
 export const socket = io(import.meta.env.VITE_API_URL, {
-    path: '/sockets',
+    path: '/ws/socket.io',
     transports: ['websocket'],
     secure: true
 })

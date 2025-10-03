@@ -1,85 +1,87 @@
-import {
-    Dispatch,
-    SetStateAction,
-    useCallback,
-    useEffect,
-    useRef,
-} from "react";
+import { useEffect, useRef, useCallback, Dispatch, SetStateAction } from "react";
 import { Socket } from "socket.io-client";
-import { toast } from "sonner";
-
-const MAX_DISTANCE = 100;
-const TIMEOUT_MS = 3000;
 
 const usePedestrianCommunicator = (
-    crosswalkId: number,
-    socket: Socket,
-    alertLevel: number,
-    setAlertLevel: Dispatch<SetStateAction<number>>
+  crosswalkId: number | null | undefined,
+  socket: Socket,
+  alertLevel: number,
+  setAlertLevel: Dispatch<SetStateAction<number>>
 ) => {
-    const intervalId = useRef<NodeJS.Timeout | null>(null);
+  const joinedCrosswalkRef = useRef<number | null>(null);
+  const isListeningRef = useRef(false);
 
-    const lastCloseDriver = useRef<number>(0);
+  const leaveIfJoined = useCallback(
+    (reason?: string) => {
+      if (joinedCrosswalkRef.current != null) {
+        const cw = joinedCrosswalkRef.current;
+        // send leave
+        socket.emit("ped_leave", { crosswalk_id: cw });
+        console.log(
+          "[ped_communicator] ped_leave",
+          { crosswalk_id: cw },
+          reason ? `reason=${reason}` : ""
+        );
+        joinedCrosswalkRef.current = null;
+      }
+    },
+    [socket]
+  );
 
-    const handleDriverNearby = useCallback(
-        (distance: number) => {
-            toast("Driver nearby! Distance: " + distance.toFixed(1) + "m");
-            if (distance < MAX_DISTANCE) {
-                lastCloseDriver.current = Date.now();
-                if (alertLevel !== 4) setAlertLevel(4);
-            }
-        },
-        [alertLevel, setAlertLevel]
-    );
+  const handlePedCritical = useCallback(
+    (payload: { crosswalk_id: number; min_distance: number; ts: number }) => {
+      console.log("[ped_communicator] ped_critical received", payload);
+      setAlertLevel((prev) => (prev < 4 ? 4 : prev));
+    },
+    [setAlertLevel]
+  );
 
-    useEffect(() => {
-        console.log('pedestrian hook socket id', socket.id, 'connected', socket.connected);
-  // opcionálisan: log on connect/disconnect
-        const onConnect = () => console.log('pedestrian socket connected', socket.id);
-        const onDisconnect = (reason: unknown) => console.log('pedestrian socket disconnected', reason);
-        socket.on('connect', onConnect);
-        socket.on('disconnect', onDisconnect);
-        if (!(alertLevel >= 2 && crosswalkId)) {
-            if (intervalId.current) {
-                clearInterval(intervalId.current);
-                intervalId.current = null;
-            }
-            return;
-        }
+  // Manage listener (only ped_critical)
+  useEffect(() => {
+    if (!isListeningRef.current) {
+      socket.off("ped_critical"); // safety
+      socket.on("ped_critical", handlePedCritical);
+      isListeningRef.current = true;
 
-        const eventName = `driver_nearby_${crosswalkId}`;
-        // remove any previous listeners for this event (safer than passing handler reference)
-        socket.off(eventName);
-        socket.on(eventName, handleDriverNearby);
-        console.log("listening", eventName);
+      console.log("[ped_communicator] listening to ped_critical");
+    }
+    return () => {
+      socket.off("ped_critical", handlePedCritical);
+      isListeningRef.current = false;
+    };
+  }, [socket, handlePedCritical]);
 
-        // test emit with optional ack to confirm server side saw it
-        socket.emit(`pedestrian_nearby_${crosswalkId}`, undefined, (ack: unknown) => {
-            console.log("pedestrian emit ack:", ack);
-        });
+  // Core enter/leave logic bound to alertLevel and crosswalkId
+  useEffect(() => {
+    const canParticipate = alertLevel >= 3 && !!crosswalkId;
 
-        if (!intervalId.current) {
-            intervalId.current = setInterval(() => {
-                socket.emit(`pedestrian_nearby_${crosswalkId}`, undefined, (ack: unknown) => {
-                    console.log("pedestrian emit ack:", ack);
-                });
-                if (
-                    alertLevel === 4 &&
-                    Date.now() - lastCloseDriver.current > TIMEOUT_MS
-                ) {
-                    setAlertLevel(3);
-                }
-            }, 500);
-        }
+    if (!canParticipate) {
+      // condition no longer satisfied
+      leaveIfJoined("alertLevel_or_crosswalk_inactive");
+      return;
+    }
 
-        return () => {
-            socket.off(eventName);
-            if (intervalId.current) {
-                clearInterval(intervalId.current);
-                intervalId.current = null;
-            }
-        };
-    }, [crosswalkId, alertLevel, socket, handleDriverNearby, setAlertLevel]);
+    // If switching crosswalks
+    if (
+      joinedCrosswalkRef.current != null &&
+      joinedCrosswalkRef.current !== crosswalkId
+    ) {
+      leaveIfJoined("crosswalk_changed");
+    }
+
+    // Enter if not already
+    if (joinedCrosswalkRef.current == null && crosswalkId) {
+      socket.emit("ped_enter", { crosswalk_id: crosswalkId });
+      joinedCrosswalkRef.current = crosswalkId;
+      console.log("[ped_communicator] ped_enter", { crosswalk_id: crosswalkId });
+    }
+  }, [alertLevel, crosswalkId, socket, leaveIfJoined]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      leaveIfJoined("unmount");
+    };
+  }, [leaveIfJoined]);
 };
 
 export default usePedestrianCommunicator;

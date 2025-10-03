@@ -1,132 +1,145 @@
 import time
-from app.state import CROSSWALKS, ROLE, RUNNING_TASKS
-from prediction import predictImageIsCrosswalk
+from typing import Optional
 from sockets import sio_server
+from prediction import predictImageIsCrosswalk
 from app.notifications import handle_distance_based_notifications
-from app.locks import get_crosswalk_lock, _running_tasks_lock, _role_lock
+from app.state import (
+    get_client,
+    set_role,
+    add_ped,
+    remove_ped,
+    add_driver,
+    update_driver,
+    remove_driver,
+    list_crosswalk_ids,
+    get_crosswalk,
+    add_running_task,
+)
+# If you still have per-crosswalk asyncio locks you can import them; otherwise omitted:
+# from app.locks import get_crosswalk_lock
+
+async def _cleanup_sid_membership(sid: str, role: Optional[str]):
+    """
+    Naive cleanup: scan all crosswalks and remove sid from peds/drivers.
+    For large scale, maintain an inverse index (session doc listing memberships).
+    """
+    db = await get_client()
+    try:
+        ids = await list_crosswalk_ids(db)
+        for crosswalk_id in ids:
+            cw = await get_crosswalk(db, crosswalk_id)
+            if not cw:
+                continue
+            modified = False
+            if role == "ped" and sid in cw.get("peds", []):
+                await remove_ped(db, crosswalk_id, sid)
+                modified = True
+            elif role == "driver" and sid in cw.get("drivers", {}):
+                await remove_driver(db, crosswalk_id, sid)
+                modified = True
+            if modified:
+                # Trigger notification logic to reflect presence change
+                await handle_distance_based_notifications(crosswalk_id)
+    except Exception:
+        pass
+
 
 @sio_server.event
 async def connect(sid, environ):
-    async with _role_lock:
-        ROLE[sid] = None
+    db = await get_client()
+    await set_role(db, sid, None)
+
 
 @sio_server.event
 async def disconnect(sid):
-    async with _role_lock:
-        role = ROLE.pop(sid, None)
-        
-    crosswalks_to_update = []
+    # Fetch role (session doc) then cleanup.
+    # For simplicity we re-fetch crosswalks; optimize later.
+    db = await get_client()
+    # We did not store role locally; just attempt both roles
+    # (You can read session doc if you wish to narrow)
+    # Try ped removal first, then driver.
+    await _cleanup_sid_membership(sid, "ped")
+    await _cleanup_sid_membership(sid, "driver")
+    # Optionally clear role
+    await set_role(db, sid, None)
 
-    
-    # First, collect crosswalks that need updates
-    for crosswalk_id, cr in CROSSWALKS.items():
-        lock = await get_crosswalk_lock(crosswalk_id)
-        async with lock:
-            modified = False
-            if role == "ped" and sid in cr.get("peds", set()):
-                cr["peds"].remove(sid)
-                modified = True
-            elif role == "driver" and sid in cr.get("drivers", {}):
-                cr["drivers"].pop(sid, None)
-                modified = True
-            
-            if modified:
-                crosswalks_to_update.append(crosswalk_id)
-    for crosswalk_id in crosswalks_to_update:
-        ensure_background_task_running(crosswalk_id)
-    
+
 @sio_server.event
 async def predict(sid, username, imageAsBase64):
     try:
         result = predictImageIsCrosswalk(imageAsBase64)
-        await sio_server.emit('predict_result_'+ username, result, to=sid)
+        await sio_server.emit("predict_result_" + username, result, to=sid)
     except Exception as e:
-        await sio_server.emit('predict_error_'+ username, str(e), to=sid)
-        
+        await sio_server.emit("predict_error_" + username, str(e), to=sid)
+
 
 @sio_server.event
 async def ped_enter(sid, data):
     crosswalk_id = data["crosswalk_id"]
-    
-    async with _role_lock:
-        ROLE[sid] = "ped"
-        
-    lock = await get_crosswalk_lock(crosswalk_id)
-    critical_alert = None
-    async with lock:
-        cr = CROSSWALKS.setdefault(crosswalk_id, {
-                                "peds" : set(),
-                                "drivers" : {},
-                                "last_broadcast": {}
-                                })
-        CROSSWALKS[crosswalk_id]["peds"].add(sid)
-        existing_alert = cr["last_broadcast"].get("ped_critical_min_distance")
+    db = await get_client()
+    await set_role(db, sid, "ped")
+    await add_ped(db, crosswalk_id, sid)
+
+    # If there was an active ped critical alert, re-send it to this new ped
+    cw = await get_crosswalk(db, crosswalk_id)
+    if cw:
+        existing_alert = (cw.get("last_broadcast") or {}).get("ped_critical_min_distance")
         if existing_alert is not None:
-            critical_alert = {
+            payload = {
                 "crosswalk_id": crosswalk_id,
                 "min_distance": existing_alert,
                 "ts": int(time.time())
             }
-    if critical_alert:
-        await sio_server.emit("ped_critical", critical_alert, to=sid)
-    await ensure_background_task_running(crosswalk_id)
+            await sio_server.emit("ped_critical", payload, to=sid)
+
+    await _ensure_background_task_running(crosswalk_id)
+
 
 @sio_server.event
 async def ped_leave(sid, data):
-    crosswalk_id = data["crosswalk_id"]
+    crosswalk_id = data.get("crosswalk_id")
     if crosswalk_id is None:
         return
-    lock = await get_crosswalk_lock(crosswalk_id)
-    async with lock:
-        cr = CROSSWALKS.get(crosswalk_id)
-        if cr and sid in cr.get("peds", set()):
-            cr["peds"].remove(sid)
-    await ensure_background_task_running(crosswalk_id)
-    
+    db = await get_client()
+    await remove_ped(db, crosswalk_id, sid)
+    await _ensure_background_task_running(crosswalk_id)
+
+
 @sio_server.event
 async def driver_enter(sid, data):
     crosswalk_id = data["crosswalk_id"]
-    async with _role_lock:
-        ROLE[sid] = "driver"
-        
-    lock = await get_crosswalk_lock(crosswalk_id)
-    async with lock:
-        
-        CROSSWALKS.setdefault(crosswalk_id, {
-                                    "peds" : set(),
-                                    "drivers" : {},
-                                    "last_broadcast": {}
-                                    })
-        CROSSWALKS[crosswalk_id]["drivers"][sid] = {"distance" : data.get("distance"), "ts": time.time()}
-    await ensure_background_task_running(crosswalk_id)
-    
+    distance = data.get("distance")
+    db = await get_client()
+    await set_role(db, sid, "driver")
+    await add_driver(db, crosswalk_id, sid, distance)
+    await _ensure_background_task_running(crosswalk_id)
+
+
 @sio_server.event
 async def driver_update(sid, data):
     crosswalk_id = data["crosswalk_id"]
-    lock = await get_crosswalk_lock(crosswalk_id)
-    
-    async with lock:
-        
-        cr = CROSSWALKS.get(crosswalk_id)
-        if cr and sid in cr["drivers"]:
-            cr["drivers"][sid]["distance"] = data.get("distance")
-            cr["drivers"][sid]["ts"] = time.time()
-    await ensure_background_task_running(crosswalk_id)
+    distance = data.get("distance")
+    db = await get_client()
+    await update_driver(db, crosswalk_id, sid, distance)
+    await _ensure_background_task_running(crosswalk_id)
+
 
 @sio_server.event
 async def driver_leave(sid, data):
     crosswalk_id = data["crosswalk_id"]
-    lock = await get_crosswalk_lock(crosswalk_id)
-    async with lock:    
-        cr = CROSSWALKS.get(crosswalk_id)
-        if cr and sid in cr["drivers"]:
-            cr["drivers"].pop(sid, None)
-    await ensure_background_task_running(crosswalk_id)
-    
-    
-async def ensure_background_task_running(crosswalk_id):
-    async with _running_tasks_lock:
-            if crosswalk_id not in RUNNING_TASKS:
-                RUNNING_TASKS.add(crosswalk_id)
-                # Start the background task
-                sio_server.start_background_task(handle_distance_based_notifications, crosswalk_id)
+    db = await get_client()
+    await remove_driver(db, crosswalk_id, sid)
+    await _ensure_background_task_running(crosswalk_id)
+
+
+async def _ensure_background_task_running(crosswalk_id: int):
+    """
+    Uses Firestore-backed running_tasks to guarantee single task per crosswalk cluster-wide.
+    """
+    db = await get_client()
+    try:
+        started = await add_running_task(db, crosswalk_id)
+        if started:
+            sio_server.start_background_task(handle_distance_based_notifications, crosswalk_id)
+    except Exception:
+        pass
