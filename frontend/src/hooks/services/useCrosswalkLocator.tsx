@@ -239,7 +239,8 @@ const useCrosswalkLocator = (
             }
             if (!intervalId.current){
                 intervalId.current = window.setInterval(async () => {
-                    const id = await chooseEndangeredCrosswalk()
+                    let id = await chooseEndangeredCrosswalk()
+                    if (id === null) id = 0;
                     setCrosswalkId(id)}, 5000);
             }
             
@@ -251,6 +252,7 @@ const useCrosswalkLocator = (
                 clearInterval(intervalId.current);
                 intervalId.current = null;
             }
+            setCrosswalkId(0)
             // if (isOrientationActive) {
             //     setIsOrientationActive(false);
             // }

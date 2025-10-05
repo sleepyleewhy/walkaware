@@ -1,87 +1,86 @@
-import { useEffect, useRef, useCallback, Dispatch, SetStateAction } from "react";
+import { Dispatch, useEffect, useRef} from "react";
 import { Socket } from "socket.io-client";
 
 const usePedestrianCommunicator = (
   crosswalkId: number | null | undefined,
   socket: Socket,
   alertLevel: number,
-  setAlertLevel: Dispatch<SetStateAction<number>>
+  setAlertLevel: Dispatch<React.SetStateAction<number>>
 ) => {
   const joinedCrosswalkRef = useRef<number | null>(null);
-  const isListeningRef = useRef(false);
 
-  const leaveIfJoined = useCallback(
-    (reason?: string) => {
-      if (joinedCrosswalkRef.current != null) {
-        const cw = joinedCrosswalkRef.current;
-        // send leave
-        socket.emit("ped_leave", { crosswalk_id: cw });
-        console.log(
-          "[ped_communicator] ped_leave",
-          { crosswalk_id: cw },
-          reason ? `reason=${reason}` : ""
-        );
+      const alertLevelRef = useRef(alertLevel);
+
+    useEffect(() => {
+        alertLevelRef.current = alertLevel;
+    }, [alertLevel]);
+
+    useEffect(() => {
+        socket.on("presence", (data: { driver_count: number, crosswalk_id: number }) => {
+          console.log("[ped_communicator] presence", data);
+          if (data.crosswalk_id !== joinedCrosswalkRef.current) return;
+          if (data.driver_count > 0 && alertLevelRef.current === 2) {
+              setAlertLevel(3);
+          }
+          else if (data.driver_count === 0 && (alertLevelRef.current >= 3)) {
+              setAlertLevel(2);
+          }
+        })
+        socket.on("ped_critical", (data: { min_distance: number, crosswalk_id: number}) => {
+          console.log("[ped_communicator] ped_critical received", data);
+          if (data.crosswalk_id !== joinedCrosswalkRef.current) return;
+            if (alertLevelRef.current === 3 || alertLevelRef.current === 2) {
+                setAlertLevel(4);
+                console.log("[ped_communicator] alert level raised to 4");
+            }
+        })
+        socket.on("alert_end", (data: {crosswalk_id : number}) => {
+          if (data.crosswalk_id !== joinedCrosswalkRef.current) return;
+            if (alertLevelRef.current === 4) {
+                setAlertLevel(3);
+            }
+            console.log("[ped_communicator] alert_end received");
+        })
+
+        return () => {
+            socket.off("presence");
+            socket.off("ped_critical");
+            socket.off("alert_end");
+        }
+    }, [socket, setAlertLevel])
+
+
+  useEffect(() => {
+    const active = alertLevel >= 2;
+    const hasValidCrosswalk = !!crosswalkId && crosswalkId > 0;
+
+    if (!active || !hasValidCrosswalk) {
+      if (joinedCrosswalkRef.current !== null) {
+        socket.emit("ped_leave", { crosswalk_id: joinedCrosswalkRef.current });
         joinedCrosswalkRef.current = null;
       }
-    },
-    [socket]
-  );
-
-  const handlePedCritical = useCallback(
-    (payload: { crosswalk_id: number; min_distance: number; ts: number }) => {
-      console.log("[ped_communicator] ped_critical received", payload);
-      setAlertLevel((prev) => (prev < 4 ? 4 : prev));
-    },
-    [setAlertLevel]
-  );
-
-  // Manage listener (only ped_critical)
-  useEffect(() => {
-    if (!isListeningRef.current) {
-      socket.off("ped_critical"); // safety
-      socket.on("ped_critical", handlePedCritical);
-      isListeningRef.current = true;
-
-      console.log("[ped_communicator] listening to ped_critical");
-    }
-    return () => {
-      socket.off("ped_critical", handlePedCritical);
-      isListeningRef.current = false;
-    };
-  }, [socket, handlePedCritical]);
-
-  // Core enter/leave logic bound to alertLevel and crosswalkId
-  useEffect(() => {
-    const canParticipate = alertLevel >= 3 && !!crosswalkId;
-
-    if (!canParticipate) {
-      // condition no longer satisfied
-      leaveIfJoined("alertLevel_or_crosswalk_inactive");
       return;
     }
 
-    // If switching crosswalks
-    if (
-      joinedCrosswalkRef.current != null &&
-      joinedCrosswalkRef.current !== crosswalkId
-    ) {
-      leaveIfJoined("crosswalk_changed");
+    if (joinedCrosswalkRef.current === crosswalkId) return;
+
+    if (joinedCrosswalkRef.current !== null) {
+      socket.emit("ped_leave", { crosswalk_id: joinedCrosswalkRef.current });
     }
 
-    // Enter if not already
-    if (joinedCrosswalkRef.current == null && crosswalkId) {
-      socket.emit("ped_enter", { crosswalk_id: crosswalkId });
-      joinedCrosswalkRef.current = crosswalkId;
-      console.log("[ped_communicator] ped_enter", { crosswalk_id: crosswalkId });
-    }
-  }, [alertLevel, crosswalkId, socket, leaveIfJoined]);
+    socket.emit("ped_enter", { crosswalk_id: crosswalkId });
+    console.log("Emitted ped_enter for crosswalk", crosswalkId);
+    joinedCrosswalkRef.current = crosswalkId || null;
+  }, [alertLevel, crosswalkId, socket]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      leaveIfJoined("unmount");
+      if (joinedCrosswalkRef.current !== null) {
+        socket.emit("ped_leave", { crosswalk_id: joinedCrosswalkRef.current });
+        joinedCrosswalkRef.current = null;
+      }
     };
-  }, [leaveIfJoined]);
+  }, [socket]);
 };
 
 export default usePedestrianCommunicator;
