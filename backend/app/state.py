@@ -14,7 +14,7 @@ DRIVER_CRITICAL_DISTANCE = 50.0
 DEBOUNCE_MIN_DISTANCE_DELTA = 3.0
 DRIVER_PRESENCE_TTL = 15.0
 PED_PRESENCE_TTL = 15.0
-PRUNE_LOOP_INTERVAL = 1.0
+PRUNE_LOOP_INTERVAL = 20.0
 
 # CROSSWALKS: dict[int, dict[str, Any]] = {}
 # SUBSCRIPTIONS: dict[str, Set[int]] = {}
@@ -90,7 +90,7 @@ async def remove_driver(db: AsyncClient, crosswalk_id: int, sid: str):
             drivers.pop(sid, None)
             transaction.update(cw_ref, {"drivers": drivers})
 
-    await txn_remove(db)
+    await txn_remove(db.transaction())
 
 async def get_crosswalk(db: AsyncClient, crosswalk_id: int) -> Optional[Dict[str, Any]]:
     snap = await crosswalk_ref(db, crosswalk_id).get()
@@ -115,7 +115,7 @@ async def clear_last_broadcast_key(db: AsyncClient, crosswalk_id: int, key: str)
             lb.pop(key, None)
             transaction.update(cw_ref, {"last_broadcast": lb})
 
-    await txn(db)
+    await txn(db.transaction())
 
 # Session / role
 async def set_role(db: AsyncClient, sid: str, role: Optional[str]):
@@ -140,7 +140,7 @@ async def add_running_task(db: AsyncClient, crosswalk_id: int) -> bool:
         transaction.set(ref, {"running_tasks": tasks}, merge=True)
         return True
 
-    return await txn(db)
+    return await txn(db.transaction())
 
 async def remove_running_task(db: AsyncClient, crosswalk_id: int):
     ref = runtime_ref(db)
@@ -155,7 +155,7 @@ async def remove_running_task(db: AsyncClient, crosswalk_id: int):
             tasks.remove(crosswalk_id)
             transaction.update(ref, {"running_tasks": tasks})
 
-    await txn(db)
+    await txn(db.transaction())
 
 async def list_crosswalk_ids(db: AsyncClient) -> List[int]:
     docs = await db.collection("crosswalks").select([]).get()

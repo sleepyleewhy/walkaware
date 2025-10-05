@@ -5,10 +5,12 @@
       "name": "FastAPI Dev",
       "type": "debugpy",
       "request": "launch",
-      "module": "fastapi",
+      "module": "uvicorn",
       "args": [
-        "dev",
-        "main.py"
+        "main:app",
+        "--reload",
+        "--host", "0.0.0.0",
+        "--port", "8000"
       ],
       "cwd": "${workspaceFolder}/backend",
       "jinja": true,
