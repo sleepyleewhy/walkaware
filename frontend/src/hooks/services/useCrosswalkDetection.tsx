@@ -9,21 +9,26 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
 
     const isCrosswalkDetectionActive = alertLevel >= 1;
     const noCrosswalkCounter = useRef(0);
-    const user_guid = localStorage.getItem("user_guid");
     const intervalId = useRef<number | null>(null);
     const imageRef = useRef(imageAsBase64);
-
+    
     useEffect(() => {
         imageRef.current = imageAsBase64;
     }, [imageAsBase64]);
+    
+    const user_guid = localStorage.getItem("user_guid");
+    const alertlevelRef = useRef(alertLevel);
 
+    useEffect(() => {
+        alertlevelRef.current = alertLevel;
+    }, [alertLevel]);
 
     useEffect(() => {
         socket.on("predict_result_" + user_guid, (data) => {
-            if (alertLevel >=1){
+            if (alertlevelRef.current >=1){
                 if (data === true) {
                     noCrosswalkCounter.current = 0;
-                    if (alertLevel === 1) {
+                    if (alertlevelRef.current === 1) {
                         setAlertLevel(2);
                     }
                 }
@@ -39,7 +44,11 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
             }
 
         });
-    },[socket, alertLevel, user_guid, setAlertLevel] )
+
+        return () => {
+            socket.off("predict_result_" + user_guid);
+        }
+    },[socket, setAlertLevel, user_guid] )
 
 
     useEffect(() => {
@@ -53,7 +62,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
                     if (imageRef.current != "") {
                         socket.emit("predict", user_guid, imageRef.current);
                     }
-                }, 1000 / 5);
+                }, 1000 / 2);
             }
             
         }
@@ -61,12 +70,18 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
             if (isCameraActive) {
                 setIsCameraActive(false);
             }
-            socket.off("predict_result_" + user_guid);
             if (intervalId.current) {
                 clearInterval(intervalId.current);
                 intervalId.current = null;
             }
         }
+        return () => {
+            if (intervalId.current) {
+                clearInterval(intervalId.current);
+                intervalId.current = null;
+            }
+        }
+            
 
 
     }, [alertLevel, imageAsBase64, socket, setAlertLevel, user_guid, isCameraActive, setIsCameraActive]);
