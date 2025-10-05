@@ -17,9 +17,11 @@ async def prune_loop():
     while True:
         db = await get_client()
         try:
-            ids = await list_crosswalk_ids(db)
-            for crosswalk_id in ids:
-                await handle_distance_based_notifications(crosswalk_id)
+            docs = await db.collection("crosswalks").get()
+            for doc in docs:
+                crosswalk_id = int(doc.id)
+                cw_data = doc.to_dict() if doc.exists else None
+                await handle_distance_based_notifications(crosswalk_id, cw_data)
         except Exception:
             # Swallow errors to keep loop alive; could log here
             pass
