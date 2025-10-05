@@ -5,6 +5,7 @@ from google.cloud.firestore_v1 import (
     async_transactional,
     ArrayUnion,
     ArrayRemove,
+    DELETE_FIELD
 )
 import asyncio
 import time
@@ -45,13 +46,11 @@ def runtime_ref(db: AsyncClient):
 # Crosswalk operations
 async def ensure_crosswalk(db: AsyncClient, crosswalk_id: int):
     ref = crosswalk_ref(db, crosswalk_id)
-    snap = await ref.get()
-    if not snap.exists:
-        await ref.set({
-            "peds": [],
-            "drivers": {},
-            "last_broadcast": {}
-        })
+    await ref.set({
+        "peds": [],
+        "drivers": {},
+        "last_broadcast": {}
+    }, merge=True)
 
 async def add_ped(db: AsyncClient, crosswalk_id: int, sid: str):
     await ensure_crosswalk(db, crosswalk_id)
@@ -78,19 +77,8 @@ async def update_driver(db: AsyncClient, crosswalk_id: int, sid: str, distance: 
 
 async def remove_driver(db: AsyncClient, crosswalk_id: int, sid: str):
     cw_ref = crosswalk_ref(db, crosswalk_id)
-
-    @async_transactional
-    async def txn_remove(transaction: AsyncTransaction):
-        snap = await cw_ref.get(transaction=transaction)
-        if not snap.exists:
-            return
-        data = snap.to_dict() or {}
-        drivers = data.get("drivers", {})
-        if sid in drivers:
-            drivers.pop(sid, None)
-            transaction.update(cw_ref, {"drivers": drivers})
-
-    await txn_remove(db.transaction())
+    await cw_ref.update({f"drivers.{sid}": DELETE_FIELD})
+    
 
 async def get_crosswalk(db: AsyncClient, crosswalk_id: int) -> Optional[Dict[str, Any]]:
     snap = await crosswalk_ref(db, crosswalk_id).get()
@@ -125,37 +113,13 @@ async def remove_session(db: AsyncClient, sid: str):
     await session_ref(db, sid).delete()
 
 # Running tasks
-async def add_running_task(db: AsyncClient, crosswalk_id: int) -> bool:
+async def add_running_task(db: AsyncClient, crosswalk_id: int):
     ref = runtime_ref(db)
-
-    @async_transactional
-    async def txn(transaction: AsyncTransaction):
-        snap = await ref.get(transaction=transaction)
-        tasks = []
-        if snap.exists:
-            tasks = snap.to_dict().get("running_tasks", [])
-        if crosswalk_id in tasks:
-            return False
-        tasks.append(crosswalk_id)
-        transaction.set(ref, {"running_tasks": tasks}, merge=True)
-        return True
-
-    return await txn(db.transaction())
+    await ref.set({"running_tasks": ArrayUnion([crosswalk_id])}, merge=True)
 
 async def remove_running_task(db: AsyncClient, crosswalk_id: int):
     ref = runtime_ref(db)
-
-    @async_transactional
-    async def txn(transaction: AsyncTransaction):
-        snap = await ref.get(transaction=transaction)
-        if not snap.exists:
-            return
-        tasks = snap.to_dict().get("running_tasks", [])
-        if crosswalk_id in tasks:
-            tasks.remove(crosswalk_id)
-            transaction.update(ref, {"running_tasks": tasks})
-
-    await txn(db.transaction())
+    await ref.update({"running_tasks": ArrayRemove([crosswalk_id])})
 
 async def list_crosswalk_ids(db: AsyncClient) -> List[int]:
     docs = await db.collection("crosswalks").select([]).get()

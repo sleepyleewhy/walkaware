@@ -41,6 +41,11 @@ async def handle_distance_based_notifications(crosswalk_id: int):
     Persists driver critical state in last_broadcast.driver_critical_active (map sid -> last distance).
     """
     db = await get_client()
+    if cw is None:
+        cw = await get_crosswalk(db, crosswalk_id)
+    if not cw:
+        await remove_running_task(db, crosswalk_id)
+        return
     try:
         cw = await get_crosswalk(db, crosswalk_id)
         if not cw:
