@@ -34,7 +34,7 @@ async def emit_presence(crosswalk_id: int, peds: List[str], drivers: List[str]):
     await emit_to_sids(drivers, "presence", payload)
 
 
-async def handle_distance_based_notifications(crosswalk_id: int):
+async def handle_distance_based_notifications(crosswalk_id: int, cw: Dict[str, Any] = None):
     """
     Reads crosswalk document, applies TTL pruning + critical distance logic,
     updates last_broadcast fields, and emits events.

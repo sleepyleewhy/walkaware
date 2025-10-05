@@ -153,3 +153,4 @@ async def _ensure_background_task_running(crosswalk_id: int):
             sio_server.start_background_task(handle_distance_based_notifications, crosswalk_id)
     except Exception:
         pass
+    

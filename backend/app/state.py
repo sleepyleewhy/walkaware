@@ -7,6 +7,7 @@ from google.cloud.firestore_v1 import (
     ArrayRemove,
     DELETE_FIELD
 )
+from google.api_core.exceptions import AlreadyExists, NotFound
 import asyncio
 import time
 
@@ -40,17 +41,18 @@ def crosswalk_ref(db: AsyncClient, crosswalk_id: int):
 def session_ref(db: AsyncClient, sid: str):
     return db.collection("sessions").document(sid)
 
-def runtime_ref(db: AsyncClient):
-    return db.collection("runtime").document("control")
-
+def runtime_ref(db: AsyncClient, crosswalk_id : int):
+    return db.collection("runtime").document(str(crosswalk_id))
 # Crosswalk operations
 async def ensure_crosswalk(db: AsyncClient, crosswalk_id: int):
     ref = crosswalk_ref(db, crosswalk_id)
-    await ref.set({
-        "peds": [],
-        "drivers": {},
-        "last_broadcast": {}
-    }, merge=True)
+    snap = await ref.get()
+    if not snap.exists:
+        await ref.set({
+            "peds": [],
+            "drivers": {},
+            "last_broadcast": {}
+        })
 
 async def add_ped(db: AsyncClient, crosswalk_id: int, sid: str):
     await ensure_crosswalk(db, crosswalk_id)
@@ -77,7 +79,10 @@ async def update_driver(db: AsyncClient, crosswalk_id: int, sid: str, distance: 
 
 async def remove_driver(db: AsyncClient, crosswalk_id: int, sid: str):
     cw_ref = crosswalk_ref(db, crosswalk_id)
-    await cw_ref.update({f"drivers.{sid}": DELETE_FIELD})
+    await cw_ref.update({
+        f"drivers.{sid}": DELETE_FIELD,
+        f"last_broadcast.driver_critical_active.{sid}": DELETE_FIELD
+    })
     
 
 async def get_crosswalk(db: AsyncClient, crosswalk_id: int) -> Optional[Dict[str, Any]]:
@@ -114,12 +119,26 @@ async def remove_session(db: AsyncClient, sid: str):
 
 # Running tasks
 async def add_running_task(db: AsyncClient, crosswalk_id: int):
-    ref = runtime_ref(db)
-    await ref.set({"running_tasks": ArrayUnion([crosswalk_id])}, merge=True)
+    ref = runtime_ref(db, crosswalk_id)
+    payload = {"ts" : time.time()}
+    try:
+        await ref.create(payload)
+        return True
+    except AlreadyExists:
+        return False
+    except Exception:
+        return False
 
 async def remove_running_task(db: AsyncClient, crosswalk_id: int):
-    ref = runtime_ref(db)
-    await ref.update({"running_tasks": ArrayRemove([crosswalk_id])})
+    ref = runtime_ref(db, crosswalk_id)
+    try:
+        await ref.delete()
+        return True
+    except NotFound:
+        pass
+    except Exception:
+        # swallow or handle based on your logging strategy
+        pass
 
 async def list_crosswalk_ids(db: AsyncClient) -> List[int]:
     docs = await db.collection("crosswalks").select([]).get()
