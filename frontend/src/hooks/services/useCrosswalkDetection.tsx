@@ -84,7 +84,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
             
 
 
-    }, [alertLevel, imageAsBase64, socket, setAlertLevel, user_guid, isCameraActive, setIsCameraActive]);
+    }, [alertLevel, socket,user_guid, isCameraActive, setIsCameraActive]);
     return isCrosswalkDetectionActive
 
 
