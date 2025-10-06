@@ -15,6 +15,35 @@ const usePedestrianCommunicator = (
         alertLevelRef.current = alertLevel;
     }, [alertLevel]);
 
+    const crosswalkIdRef = useRef(crosswalkId);
+    useEffect(() => {
+        crosswalkIdRef.current = crosswalkId;
+    }, [crosswalkId]);
+
+    useEffect(() => {
+      const onConnect = () => {
+        console.log("[ped_communicator] connected to server");
+        const active = alertLevelRef.current >= 2;
+        const id = crosswalkIdRef.current;
+        const hasValidCrosswalk = !!id && (id as number) > 0;
+        if (active && hasValidCrosswalk) {
+          socket.emit("ped_enter", { crosswalk_id: id });
+          joinedCrosswalkRef.current = id || null;
+          console.log("[ped_communicator] re-joined crosswalk", id);
+        }
+      }
+      const onDisconnect = (reason: string) => {
+        console.log("[ped_communicator] disconnected from server", reason);
+        joinedCrosswalkRef.current = null;
+      }
+      socket.on("connect", onConnect);
+      socket.on("disconnect", onDisconnect);
+      return () => {
+        socket.off("connect", onConnect);
+        socket.off("disconnect", onDisconnect);
+      }
+    }, [socket])
+
     useEffect(() => {
         const handlePresence = (data: { driver_count: number, crosswalk_id: number }) => {
           console.log("[ped_communicator] presence", data);
