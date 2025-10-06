@@ -19,6 +19,9 @@ const useCrosswalkLocator = (
     const crosswalksNodes = useRef<CrosswalkNode[]>([]);
     const [isCrosswalkLocatorActive, setIsCrosswalkLocatorActive] = useState<boolean>(false);
     const intervalId = useRef<number | null>(null);
+    const lastFetchAt = useRef<number>(0);
+    const lastFetchLoc = useRef<Location | null>(null);
+    const isFetching = useRef<boolean>(false);
 
 
     // const calculateCrosswalkAngle = useCallback((crosswalkWay: CrosswalkWay) => {
@@ -156,34 +159,58 @@ const useCrosswalkLocator = (
     // }, [location, filterCrosswalksByAngle, calculateCrosswalkAngle])
 
 
-    const getCrosswalksNearby = useCallback(async () => {
+    const haversineMeters = useCallback((a: Location, b: Location) => {
+        const toRad = (deg: number) => deg * Math.PI / 180;
+        const R = 6371e3;
+        const dLat = toRad(b.latitude - a.latitude);
+        const dLon = toRad(b.longitude - a.longitude);
+        const lat1 = toRad(a.latitude);
+        const lat2 = toRad(b.latitude);
+        const sinDlat = Math.sin(dLat / 2);
+        const sinDlon = Math.sin(dLon / 2);
+        const h = sinDlat * sinDlat + Math.cos(lat1) * Math.cos(lat2) * sinDlon * sinDlon;
+        const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+        return R * c;
+    }, []);
+
+    // Background fetcher with caching by time and distance
+    const maybeFetchCrosswalksNearby = useCallback(async () => {
         if (!location) return;
+        // Skip if already fetching
+        if (isFetching.current) return;
+
+        const now = Date.now();
+        const tooOld = now - lastFetchAt.current > 15000; // 60s TTL
+        const movedFar = lastFetchLoc.current ? haversineMeters(lastFetchLoc.current, location) > 30 : true; // 30m threshold
+
+        if (!tooOld && !movedFar && (crosswalks.current.length > 0 || crosswalksNodes.current.length > 0)) {
+            return; // cache is fine
+        }
+
         if (location.accuracy > 500) {
-            console.log('accuracy too low')
-            throw new Error("Location accuracy is too low");
+            console.log('accuracy too low');
+            return; // don't block; try later when accuracy improves
         }
-        try {
-            const response = await fetchCrosswalks(location, true)
-                crosswalks.current = response.crosswalkWays;
 
-                crosswalksNodes.current = response.crosswalkNodes.filter(node => node.isAlone);
-                filteredCrosswalks.current = filterCrosswalksByAngle(crosswalks.current);
-            
-        }
-        catch (err) {
+        try {
+            isFetching.current = true;
+            const response = await fetchCrosswalks(location, true);
+            crosswalks.current = response.crosswalkWays;
+            crosswalksNodes.current = response.crosswalkNodes.filter(node => node.isAlone);
+            filteredCrosswalks.current = filterCrosswalksByAngle(crosswalks.current);
+            lastFetchAt.current = Date.now();
+            lastFetchLoc.current = location;
+        } catch (err) {
             console.error("Error fetching crosswalks:", err);
+        } finally {
+            isFetching.current = false;
         }
-    },[location, filterCrosswalksByAngle])
+    },[location, filterCrosswalksByAngle, haversineMeters])
 
 
-    const chooseEndangeredCrosswalk = useCallback(async () => {
-        try {
-            await getCrosswalksNearby();
-        }
-        catch (err) {
-            console.error(err);
-            return -1;
-        }
+    const chooseEndangeredCrosswalk = useCallback(() => {
+        // Trigger background fetch if needed, but do not await to keep sub-second
+        void maybeFetchCrosswalksNearby();
         let bestCrosswalk = null;
         let bestCrosswalkDistance = Infinity;
 
@@ -204,16 +231,8 @@ const useCrosswalkLocator = (
                 bestNodeDistance = distance;
             }
         }
-        console.log([
-            {"filteredCrosswalks" : filteredCrosswalks.current},
-            {"crosswalks" : crosswalks.current},
-            {"crosswalksNodes" : crosswalksNodes.current},
-            {"bestCrosswalk" : bestCrosswalk},
-            {"bestNode" : bestNode},
-            {"bestCrosswalkDistance" : bestCrosswalkDistance},
-            {"bestNodeDistance" : bestNodeDistance},
-        ]
-        )
+        // console.log debug can be noisy; comment out for perf
+        // console.log({ filtered: filteredCrosswalks.current.length, ways: crosswalks.current.length, nodes: crosswalksNodes.current.length, bestCrosswalkDistance, bestNodeDistance });
 
         if (!bestCrosswalk && !bestNode) return 0;
         if (!bestCrosswalk && bestNode) return bestNode.id;
@@ -225,9 +244,7 @@ const useCrosswalkLocator = (
         else {
             return bestNode!.id;
         }
-
-
-    }, [calculateNodeDistance, calculateWayDistance, getCrosswalksNearby])
+    }, [calculateNodeDistance, calculateWayDistance, maybeFetchCrosswalksNearby])
 
 
     useEffect(() => {
@@ -238,10 +255,11 @@ const useCrosswalkLocator = (
                 setIsOrientationActive(true);
             }
             if (!intervalId.current){
-                intervalId.current = window.setInterval(async () => {
-                    let id = await chooseEndangeredCrosswalk()
-                    if (id === null) id = 0;
-                    setCrosswalkId(id)}, 5000);
+                intervalId.current = window.setInterval(() => {
+                    let id = chooseEndangeredCrosswalk();
+                    if (id === null || id === undefined) id = 0;
+                    setCrosswalkId(id);
+                }, 5000);
             }
             
 

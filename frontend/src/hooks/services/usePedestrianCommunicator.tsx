@@ -15,8 +15,37 @@ const usePedestrianCommunicator = (
         alertLevelRef.current = alertLevel;
     }, [alertLevel]);
 
+    const crosswalkIdRef = useRef(crosswalkId);
     useEffect(() => {
-        socket.on("presence", (data: { driver_count: number, crosswalk_id: number }) => {
+        crosswalkIdRef.current = crosswalkId;
+    }, [crosswalkId]);
+
+    useEffect(() => {
+      const onConnect = () => {
+        console.log("[ped_communicator] connected to server");
+        const active = alertLevelRef.current >= 2;
+        const id = crosswalkIdRef.current;
+        const hasValidCrosswalk = !!id && (id as number) > 0;
+        if (active && hasValidCrosswalk) {
+          socket.emit("ped_enter", { crosswalk_id: id });
+          joinedCrosswalkRef.current = id || null;
+          console.log("[ped_communicator] re-joined crosswalk", id);
+        }
+      }
+      const onDisconnect = (reason: string) => {
+        console.log("[ped_communicator] disconnected from server", reason);
+        joinedCrosswalkRef.current = null;
+      }
+      socket.on("connect", onConnect);
+      socket.on("disconnect", onDisconnect);
+      return () => {
+        socket.off("connect", onConnect);
+        socket.off("disconnect", onDisconnect);
+      }
+    }, [socket])
+
+    useEffect(() => {
+        const handlePresence = (data: { driver_count: number, crosswalk_id: number }) => {
           console.log("[ped_communicator] presence", data);
           if (data.crosswalk_id !== joinedCrosswalkRef.current) return;
           if (data.driver_count > 0 && alertLevelRef.current === 2) {
@@ -25,27 +54,31 @@ const usePedestrianCommunicator = (
           else if (data.driver_count === 0 && (alertLevelRef.current >= 3)) {
               setAlertLevel(2);
           }
-        })
-        socket.on("ped_critical", (data: { min_distance: number, crosswalk_id: number}) => {
+        };
+        const handlePedCritical = (data: { min_distance: number, crosswalk_id: number}) => {
           console.log("[ped_communicator] ped_critical received", data);
           if (data.crosswalk_id !== joinedCrosswalkRef.current) return;
             if (alertLevelRef.current === 3 || alertLevelRef.current === 2) {
                 setAlertLevel(4);
                 console.log("[ped_communicator] alert level raised to 4");
             }
-        })
-        socket.on("alert_end", (data: {crosswalk_id : number}) => {
+        };
+        const handleAlertEnd = (data: {crosswalk_id : number}) => {
           if (data.crosswalk_id !== joinedCrosswalkRef.current) return;
             if (alertLevelRef.current === 4) {
                 setAlertLevel(3);
             }
             console.log("[ped_communicator] alert_end received");
-        })
+        };
+
+        socket.on("presence", handlePresence);
+        socket.on("ped_critical", handlePedCritical);
+        socket.on("alert_end", handleAlertEnd);
 
         return () => {
-            socket.off("presence");
-            socket.off("ped_critical");
-            socket.off("alert_end");
+            socket.off("presence", handlePresence);
+            socket.off("ped_critical", handlePedCritical);
+            socket.off("alert_end", handleAlertEnd);
         }
     }, [socket, setAlertLevel])
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 
 
-const useCamera = ( cameraDebug : boolean, fps: number = 10) => {
+const useCamera = ( cameraDebug : boolean, fps: number = 2) => {
     const camera = useRef<MediaStream | null>(null);
     const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
     const [imageAsBase64, setImageAsBase64] = useState<string>("");

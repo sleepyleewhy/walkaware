@@ -48,7 +48,7 @@ const useCrosswalkDistanceWatcher = (
                         );
                     })
                     const dangeredCrosswalks = relevantCrosswalks.filter(cw => (cw.distance ?? Infinity) <= DANGERED_THRESHOLD);
-                    if (dangeredCrosswalks.length > 0) {
+                    if (dangeredCrosswalks.length > 0 && alertlevel < 3) {
                         setAlertLevel(3);
                     }
                     console.log("Dangered crosswalks: ", dangeredCrosswalks);

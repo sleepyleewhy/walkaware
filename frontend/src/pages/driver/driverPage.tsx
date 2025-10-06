@@ -1,6 +1,7 @@
 import DriverMetrics from "@/components/driver/DriverMetrics";
 import StartDriverButton from "@/components/driver/StartDriverButton";
 import DriverProvider from "@/context/driverProvider";
+import DriverAlertHUD from "@/components/driver/DriverAlertHUD";
 
 const DriverPage: React.FC = () => {
 
@@ -12,6 +13,7 @@ const DriverPage: React.FC = () => {
             <div className="flex space-x-5 mb-5">
                 <DriverMetrics/>
             </div>
+            <DriverAlertHUD/>
             
             
         </DriverProvider>
