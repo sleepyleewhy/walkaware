@@ -5,7 +5,9 @@ from google.cloud.firestore_v1 import (
     async_transactional,
     ArrayUnion,
     ArrayRemove,
+    DELETE_FIELD
 )
+from google.api_core.exceptions import AlreadyExists, NotFound
 import asyncio
 import time
 
@@ -14,7 +16,7 @@ DRIVER_CRITICAL_DISTANCE = 50.0
 DEBOUNCE_MIN_DISTANCE_DELTA = 3.0
 DRIVER_PRESENCE_TTL = 15.0
 PED_PRESENCE_TTL = 15.0
-PRUNE_LOOP_INTERVAL = 1.0
+PRUNE_LOOP_INTERVAL = 20.0
 
 # CROSSWALKS: dict[int, dict[str, Any]] = {}
 # SUBSCRIPTIONS: dict[str, Set[int]] = {}
@@ -39,9 +41,8 @@ def crosswalk_ref(db: AsyncClient, crosswalk_id: int):
 def session_ref(db: AsyncClient, sid: str):
     return db.collection("sessions").document(sid)
 
-def runtime_ref(db: AsyncClient):
-    return db.collection("runtime").document("control")
-
+def runtime_ref(db: AsyncClient, crosswalk_id : int):
+    return db.collection("runtime").document(str(crosswalk_id))
 # Crosswalk operations
 async def ensure_crosswalk(db: AsyncClient, crosswalk_id: int):
     ref = crosswalk_ref(db, crosswalk_id)
@@ -78,19 +79,11 @@ async def update_driver(db: AsyncClient, crosswalk_id: int, sid: str, distance: 
 
 async def remove_driver(db: AsyncClient, crosswalk_id: int, sid: str):
     cw_ref = crosswalk_ref(db, crosswalk_id)
-
-    @async_transactional
-    async def txn_remove(transaction: AsyncTransaction):
-        snap = await cw_ref.get(transaction=transaction)
-        if not snap.exists:
-            return
-        data = snap.to_dict() or {}
-        drivers = data.get("drivers", {})
-        if sid in drivers:
-            drivers.pop(sid, None)
-            transaction.update(cw_ref, {"drivers": drivers})
-
-    await txn_remove(db)
+    await cw_ref.update({
+        f"drivers.{sid}": DELETE_FIELD,
+        f"last_broadcast.driver_critical_active.{sid}": DELETE_FIELD
+    })
+    
 
 async def get_crosswalk(db: AsyncClient, crosswalk_id: int) -> Optional[Dict[str, Any]]:
     snap = await crosswalk_ref(db, crosswalk_id).get()
@@ -115,7 +108,7 @@ async def clear_last_broadcast_key(db: AsyncClient, crosswalk_id: int, key: str)
             lb.pop(key, None)
             transaction.update(cw_ref, {"last_broadcast": lb})
 
-    await txn(db)
+    await txn(db.transaction())
 
 # Session / role
 async def set_role(db: AsyncClient, sid: str, role: Optional[str]):
@@ -125,37 +118,27 @@ async def remove_session(db: AsyncClient, sid: str):
     await session_ref(db, sid).delete()
 
 # Running tasks
-async def add_running_task(db: AsyncClient, crosswalk_id: int) -> bool:
-    ref = runtime_ref(db)
-
-    @async_transactional
-    async def txn(transaction: AsyncTransaction):
-        snap = await ref.get(transaction=transaction)
-        tasks = []
-        if snap.exists:
-            tasks = snap.to_dict().get("running_tasks", [])
-        if crosswalk_id in tasks:
-            return False
-        tasks.append(crosswalk_id)
-        transaction.set(ref, {"running_tasks": tasks}, merge=True)
+async def add_running_task(db: AsyncClient, crosswalk_id: int):
+    ref = runtime_ref(db, crosswalk_id)
+    payload = {"ts" : time.time()}
+    try:
+        await ref.create(payload)
         return True
-
-    return await txn(db)
+    except AlreadyExists:
+        return False
+    except Exception:
+        return False
 
 async def remove_running_task(db: AsyncClient, crosswalk_id: int):
-    ref = runtime_ref(db)
-
-    @async_transactional
-    async def txn(transaction: AsyncTransaction):
-        snap = await ref.get(transaction=transaction)
-        if not snap.exists:
-            return
-        tasks = snap.to_dict().get("running_tasks", [])
-        if crosswalk_id in tasks:
-            tasks.remove(crosswalk_id)
-            transaction.update(ref, {"running_tasks": tasks})
-
-    await txn(db)
+    ref = runtime_ref(db, crosswalk_id)
+    try:
+        await ref.delete()
+        return True
+    except NotFound:
+        pass
+    except Exception:
+        # swallow or handle based on your logging strategy
+        pass
 
 async def list_crosswalk_ids(db: AsyncClient) -> List[int]:
     docs = await db.collection("crosswalks").select([]).get()

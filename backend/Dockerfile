@@ -6,7 +6,8 @@ RUN pip install --upgrade pip \
     && pip install --no-cache-dir \
     fastapi \
     uvicorn \
-    python-socketio
+    python-socketio \
+    google-cloud-firestore
 
 COPY . .
 

@@ -1,4 +1,4 @@
-import React, { useState, ReactNode } from "react";
+import React, { useState, ReactNode, useEffect} from "react";
 import { PedestrianContextType } from "../models/pedestrianContextType";
 
 import { PedestrianContext } from "./pedestrianContext";
@@ -37,6 +37,9 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
     } = useCamera(cameraDebug);
 
     const [alertLevel, setAlertLevel] = useState<number>(-1);
+    useEffect(() => {
+        console.log("[alertLevel] changed to", alertLevel);
+    }, [alertLevel]);
 
     const [locationDebug, setLocationDebug] = useState<boolean>(false);
     const { location, setLocation, isLocationActive, setIsLocationActive} = useLocation(alertLevel, locationDebug);
@@ -46,6 +49,7 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
     const [crosswalkId, setCrosswalkId] = useState(0);
     
     const socket = useSocketContext();
+
 
     const isCrosswalkDetectionActive = useCrosswalkDetection(
         socket,

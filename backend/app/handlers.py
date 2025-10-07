@@ -52,15 +52,24 @@ async def connect(sid, environ):
 
 @sio_server.event
 async def disconnect(sid):
-    # Fetch role (session doc) then cleanup.
-    # For simplicity we re-fetch crosswalks; optimize later.
     db = await get_client()
-    # We did not store role locally; just attempt both roles
-    # (You can read session doc if you wish to narrow)
-    # Try ped removal first, then driver.
-    await _cleanup_sid_membership(sid, "ped")
-    await _cleanup_sid_membership(sid, "driver")
-    # Optionally clear role
+    try:
+        ids = await list_crosswalk_ids(db)
+        for crosswalk_id in ids:
+            cw = await get_crosswalk(db, crosswalk_id)
+            if not cw:
+                continue
+            modified = False
+            if sid in (cw.get("peds") or []):
+                await remove_ped(db, crosswalk_id, sid)
+                modified = True
+            if sid in (cw.get("drivers") or {}):
+                await remove_driver(db, crosswalk_id, sid)
+                modified = True
+            if modified:
+                await handle_distance_based_notifications(crosswalk_id)
+    except Exception:
+        pass
     await set_role(db, sid, None)
 
 
@@ -127,6 +136,7 @@ async def driver_update(sid, data):
 @sio_server.event
 async def driver_leave(sid, data):
     crosswalk_id = data["crosswalk_id"]
+    print(crosswalk_id)
     db = await get_client()
     await remove_driver(db, crosswalk_id, sid)
     await _ensure_background_task_running(crosswalk_id)
@@ -143,3 +153,4 @@ async def _ensure_background_task_running(crosswalk_id: int):
             sio_server.start_background_task(handle_distance_based_notifications, crosswalk_id)
     except Exception:
         pass
+    

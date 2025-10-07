@@ -11,7 +11,7 @@ const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     useEffect(() => {
         socket.on("connect_error", (err) => {
-            console.error("Connection error: ",'nothing', err.message);
+            console.error("Connection error: ", err.message);
     
         });
         socket.on('connect', () => {

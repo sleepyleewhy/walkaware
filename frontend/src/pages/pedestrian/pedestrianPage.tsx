@@ -3,6 +3,7 @@ import PedestrianMetrics from "../../components/pedestrian/PedestrianMetrics";
 import PedestrianProvider from "../../context/pedestrianProvider";
 import PedestrianCalibrationDrawer from "@/components/pedestrian/PedestrianCalibrationDrawer";
 import StartPedestrianButton from "@/components/pedestrian/StartPedestrianButton";
+import PedestrianAlertHUD from "@/components/pedestrian/PedestrianAlertHUD";
 const PedestrianPage: React.FC = () => {
 
 
@@ -14,6 +15,7 @@ const PedestrianPage: React.FC = () => {
             <PedestrianCalibrationDrawer />
             </div>
             <PedestrianMetrics />
+            <PedestrianAlertHUD/>
             
             
         </PedestrianProvider>
