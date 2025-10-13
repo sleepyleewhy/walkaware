@@ -260,6 +260,9 @@ const useCrosswalkLocator = (
                     if (id === null || id === undefined) id = 0;
                     setCrosswalkId(id);
                 }, 5000);
+                let id = chooseEndangeredCrosswalk();
+                    if (id === null || id === undefined) id = 0;
+                    setCrosswalkId(id);
             }
             
 
