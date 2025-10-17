@@ -4,3 +4,6 @@ fastapi[standard]
 numpy==2.1.1
 python-socketio==5.12.1
 google-cloud-firestore
+google-api-python-client==2.153.0
+google-auth==2.35.0
+google-auth-httplib2==0.2.0
