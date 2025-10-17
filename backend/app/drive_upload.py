@@ -30,7 +30,9 @@ def _get_drive_service():
     if _drive_service is not None:
         return _drive_service
 
-    creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/drive"])
+    # Use the narrower scope that's sufficient for uploading files created by this app.
+    # This typically avoids broader consent issues during local development.
+    creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/drive.file"])
     _drive_service = build("drive", "v3", credentials=creds, cache_discovery=False)
     return _drive_service
 
@@ -70,18 +72,20 @@ def _parse_data_url(data_url: str) -> tuple[bytes, str, str]:
 
 
 def _upload_bytes_to_drive(raw: bytes, mime_type: str, folder_id: str, filename: str) -> Optional[dict]:
-    try:
-        service = _get_drive_service()
-        media = MediaIoBaseUpload(io.BytesIO(raw), mimetype=mime_type, resumable=False)
-        file_metadata = {"name": filename, "parents": [folder_id]}
-        created = (
-            service.files()
-            .create(body=file_metadata, media_body=media, fields="id, webViewLink")
-            .execute()
-        )
-        return created
-    except Exception:
-        return None
+    service = _get_drive_service()
+    media = MediaIoBaseUpload(io.BytesIO(raw), mimetype=mime_type, resumable=False)
+    file_metadata = {"name": filename, "parents": [folder_id]}
+    created = (
+        service.files()
+            .create(
+                body=file_metadata,
+                media_body=media,
+                fields="id, webViewLink",
+                supportsAllDrives=True,
+            )
+        .execute()
+    )
+    return created
 
 
 async def async_upload_image_base64_to_drive(
