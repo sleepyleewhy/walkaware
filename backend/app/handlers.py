@@ -3,6 +3,11 @@ from typing import Optional
 from sockets import sio_server
 from prediction import predictImageIsCrosswalk
 from app.notifications import handle_distance_based_notifications
+from app.drive_upload import (
+    async_upload_image_base64_to_drive,
+    DRIVE_FOLDER_CROSSWALK_ID,
+    DRIVE_FOLDER_NO_CROSSWALK_ID,
+)
 from app.state import (
     get_client,
     set_role,
@@ -74,10 +79,22 @@ async def disconnect(sid):
 
 
 @sio_server.event
-async def predict(sid, username, imageAsBase64):
+async def predict(sid, username, imageAsBase64, save: bool = False):
     try:
         result = predictImageIsCrosswalk(imageAsBase64)
         await sio_server.emit("predict_result_" + username, result, to=sid)
+
+        if save:
+            folder_id = DRIVE_FOLDER_CROSSWALK_ID if result else DRIVE_FOLDER_NO_CROSSWALK_ID
+            try:
+                sio_server.start_background_task(
+                    async_upload_image_base64_to_drive,
+                    imageAsBase64,
+                    folder_id,
+                    None,
+                )
+            except Exception:
+                pass
     except Exception as e:
         await sio_server.emit("predict_error_" + username, str(e), to=sid)
 
