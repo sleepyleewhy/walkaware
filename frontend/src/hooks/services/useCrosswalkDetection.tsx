@@ -3,8 +3,15 @@ import { Socket } from "socket.io-client";
 
 
 
-const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel: number, setAlertLevel: React.Dispatch<SetStateAction<number>>, 
-    isCameraActive: boolean, setIsCameraActive: React.Dispatch<SetStateAction<boolean>>) => {
+const useCrosswalkDetection = (
+    socket: Socket,
+    imageAsBase64: string,
+    alertLevel: number,
+    setAlertLevel: React.Dispatch<SetStateAction<number>>,
+    isCameraActive: boolean,
+    setIsCameraActive: React.Dispatch<SetStateAction<boolean>>,
+    allowImageStorage: boolean
+) => {
 
 
     const isCrosswalkDetectionActive = alertLevel >= 1;
@@ -60,7 +67,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
                 intervalId.current = window.setInterval(() => {
 
                     if (imageRef.current != "") {
-                        socket.emit("predict", user_guid, imageRef.current);
+                        socket.emit("predict", user_guid, imageRef.current, allowImageStorage);
                     }
                 }, 1000 / 2);
             }
@@ -84,7 +91,7 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
             
 
 
-    }, [alertLevel, socket,user_guid, isCameraActive, setIsCameraActive]);
+    }, [alertLevel, socket, user_guid, isCameraActive, setIsCameraActive, allowImageStorage]);
     return isCrosswalkDetectionActive
 
 

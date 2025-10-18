@@ -3,6 +3,7 @@ from typing import Optional
 from sockets import sio_server
 from prediction import predictImageIsCrosswalk
 from app.notifications import handle_distance_based_notifications
+from app.gcs_upload import async_upload_image_base64_to_gcs
 from app.state import (
     get_client,
     set_role,
@@ -74,10 +75,20 @@ async def disconnect(sid):
 
 
 @sio_server.event
-async def predict(sid, username, imageAsBase64):
+async def predict(sid, username, imageAsBase64, save: bool = False):
     try:
         result = predictImageIsCrosswalk(imageAsBase64)
         await sio_server.emit("predict_result_" + username, result, to=sid)
+
+        if save:
+            try:
+                sio_server.start_background_task(
+                    async_upload_image_base64_to_gcs,
+                    imageAsBase64,
+                    result,
+                )
+            except Exception:
+                pass
     except Exception as e:
         await sio_server.emit("predict_error_" + username, str(e), to=sid)
 
