@@ -7,9 +7,9 @@ import { Label } from "../ui/label";
 const PedestrianMetrics: React.FC = () => {
     const context = usePedestrianContext();
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 space-y-5 space-x-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Alert Card */}
-            <Card className="bg-gray-100">
+            <Card>
                 <CardHeader>
                     <CardTitle>Alert</CardTitle>
                 </CardHeader>
@@ -26,7 +26,7 @@ const PedestrianMetrics: React.FC = () => {
             </Card>
 
             {/* Crosswalk Card */}
-            <Card className="bg-gray-100">
+            <Card>
                 <CardHeader>
                     <CardTitle>Crosswalk</CardTitle>
                 </CardHeader>
@@ -43,7 +43,7 @@ const PedestrianMetrics: React.FC = () => {
             </Card>
 
             {/* Location Card */}
-            <Card className="bg-gray-100">
+            <Card>
                 <CardHeader>
                     <CardTitle>Location</CardTitle>
                 </CardHeader>
@@ -90,7 +90,7 @@ const PedestrianMetrics: React.FC = () => {
             </Card>
 
             {/* Magnitude Card */}
-            <Card className="bg-gray-100">
+            <Card>
                 <CardHeader>
                     <CardTitle>Magnitude</CardTitle>
                 </CardHeader>
@@ -122,7 +122,7 @@ const PedestrianMetrics: React.FC = () => {
                     </CardFooter>}
             </Card>
 
-            <Card className="bg-gray-100">
+            <Card>
                 <CardHeader>
                     <CardTitle>Orientation</CardTitle>
                 </CardHeader>
@@ -144,7 +144,7 @@ const PedestrianMetrics: React.FC = () => {
                             onClick={() => context.setOrientationDebug(!context.orientationDebug)}>Debug</Button>
                     </CardFooter>}
             </Card>
-            <Card className="bg-gray-100 mb-5 mr-5">
+            <Card>
                 <CardHeader>
                     <CardTitle>Camera</CardTitle>
                 </CardHeader>
