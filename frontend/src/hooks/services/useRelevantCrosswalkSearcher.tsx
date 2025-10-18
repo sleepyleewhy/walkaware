@@ -5,8 +5,15 @@ import type { Location } from '@/models/location';
 import { fetchCrosswalks } from '@/utils/CrosswalkLocation';
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef} from 'react';
 
-const OSRM_API_URL = 'https://router.project-osrm.org/table/v1/driving/';
+const OSRM_PRIVATE_BASE = 'https://osrm.walkaware.eu/table/v1/car';
+const OSRM_PUBLIC_BASE = 'https://router.project-osrm.org/table/v1/driving';
+
 const MAX_DURATION = 25; // 25 seconds
+
+function buildOsrmTableUrl(base: string, source: string, destinations: string) {
+  const baseWithSlash = base.endsWith('/') ? base : `${base}/`;
+  return `${baseWithSlash}${source};${destinations}?sources=0`;
+}
 
 const useRelevantCrosswalkSearcher = (
     location : Location | null,
@@ -21,8 +28,6 @@ const useRelevantCrosswalkSearcher = (
     
     const fetchCrosswalkDistances = useCallback(async () => {
         if (location && (crosswalks.current.length > 0 || crosswalksNodes.current.length > 0)) {
-            let apiUrl = OSRM_API_URL;
-
             const crosswalksCoordinates: CrosswalkCoordinates[] = []
             for (const cw of crosswalks.current) {
                 if (cw.nodes.length > 0) {
@@ -39,14 +44,29 @@ const useRelevantCrosswalkSearcher = (
 
             const source = location.longitude.toFixed(6) + ',' + location.latitude.toFixed(6);
             const destination = crosswalksCoordinates.map(coord => `${coord.lon.toFixed(6)},${coord.lat.toFixed(6)}`).join(';');
-            apiUrl += `${source};${destination}?sources=0`
-            const response = await fetch(apiUrl);
-            const data = await response.json()
-            
-            if (!response.ok) {
-                console.error('Failed to fetch crosswalk distances:', response.statusText);
+
+            // Try private OSRM first, then fall back to public if needed
+            let response: Response | null = null;
+            try {
+                const apiUrlPrivate = buildOsrmTableUrl(OSRM_PRIVATE_BASE, source, destination);
+                response = await fetch(apiUrlPrivate);
+                if (!response.ok) throw new Error(`Private OSRM error: ${response.status} ${response.statusText}`);
+            } catch  {
+                try {
+                    const apiUrlPublic = buildOsrmTableUrl(OSRM_PUBLIC_BASE, source, destination);
+                    response = await fetch(apiUrlPublic);
+                } catch (fallbackErr) {
+                    console.error('Failed to fetch crosswalk distances from both OSRM endpoints:', fallbackErr);
+                    return;
+                }
+            }
+
+            if (!response || !response.ok) {
+                console.error('Failed to fetch crosswalk distances:', response?.statusText);
                 return;
             }
+
+            const data = await response.json();
 
             if (data && data.durations && data.durations[0].length > 1) {
                 const relevantCrosswalks = new Set<CrosswalkCoordinates>(); 
@@ -62,17 +82,10 @@ const useRelevantCrosswalkSearcher = (
                         setAlertLevel(2);
                     }
                 }
-
             }
-
-
-
         }
-
     },[location, alertlevel, setAlertLevel, setRelevantCrosswalks]);
 
-    
-    
     useEffect(() => {
         if (alertlevel >= 1 && !intervalId.current) {
             intervalId.current = setInterval(() => {
@@ -84,6 +97,13 @@ const useRelevantCrosswalkSearcher = (
                     });
                 }
             }, 10000);
+            if (location) {
+                    fetchCrosswalks(location, false).then(data => {
+                        crosswalks.current = data.crosswalkWays;
+                        crosswalksNodes.current = data.crosswalkNodes;
+                        fetchCrosswalkDistances();
+                    });
+                }
         } else if (alertlevel < 1 && intervalId.current ) {
             clearInterval(intervalId.current);
             intervalId.current = null;
@@ -95,8 +115,6 @@ const useRelevantCrosswalkSearcher = (
             }
         };
     }, [alertlevel, location, fetchCrosswalkDistances, intervalId]);
-
-
 }
 
 export default useRelevantCrosswalkSearcher;

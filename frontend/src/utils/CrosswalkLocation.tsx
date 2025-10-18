@@ -2,23 +2,42 @@ import { Location } from '@/models/location';
 import { CrosswalkNode} from '../models/crosswalkNode' // Adjust import as needed
 import { CrosswalkWay} from '../models/crosswalkWay' // Adjust import as needed
 
-const DRIVER_FETCH_RADIUS = 200; // Default radius for fetching crosswalks in meters
+const DRIVER_FETCH_RADIUS = 200;
+const PEDESTRIAN_FETCH_RADIUS = 50; 
+const OVERPASS_PRIVATE = 'https://overpass.walkaware.eu/api/interpreter';
+const OVERPASS_PUBLIC = 'https://overpass.private.coffee/api/interpreter';
 
 export async function fetchCrosswalks(
     location: Location,
     isPedestrian: boolean
 ): Promise<{ crosswalkWays: CrosswalkWay[]; crosswalkNodes: CrosswalkNode[] }> {
-    const response = await fetch("https://overpass.private.coffee/api/interpreter", {
-        method: "POST",
-        body: `data=${encodeURIComponent(`
+    const body = `data=${encodeURIComponent(`
             [out:json];
             (
-                way["highway"="footway"]["footway"="crossing"](around:${isPedestrian ? location.accuracy : DRIVER_FETCH_RADIUS},${location.latitude},${location.longitude});
-                node["highway"="crossing"]["crossing:markings"="zebra"](around:${isPedestrian ? location.accuracy : DRIVER_FETCH_RADIUS},${location.latitude},${location.longitude});
+                way["highway"="footway"]["footway"="crossing"](around:${isPedestrian ? PEDESTRIAN_FETCH_RADIUS : DRIVER_FETCH_RADIUS},${location.latitude},${location.longitude});
+                node["highway"="crossing"]["crossing:markings"="zebra"](around:${isPedestrian ? PEDESTRIAN_FETCH_RADIUS : DRIVER_FETCH_RADIUS},${location.latitude},${location.longitude});
             );
             out geom;
-        `)}`
-    }).then((res) => res.json());
+        `)}`;
+    let res: Response | null = null;
+    try {
+        res = await fetch(OVERPASS_PRIVATE, { method: 'POST', body });
+        if (!res.ok) throw new Error(`Private Overpass error: ${res.status} ${res.statusText}`);
+    } catch  {
+        try {
+            res = await fetch(OVERPASS_PUBLIC, { method: 'POST', body });
+        } catch (fallbackErr) {
+            console.error('Overpass fetch failed on both private and public endpoints:', fallbackErr);
+            return { crosswalkWays: [], crosswalkNodes: [] };
+        }
+    }
+
+    if (!res || !res.ok) {
+        console.error('Overpass fetch not OK:', res?.status, res?.statusText);
+        return { crosswalkWays: [], crosswalkNodes: [] };
+    }
+
+    const response = await res.json();
 
     console.log('Crosswalks fetched:', response);
     const allCrosswalksNodes: CrosswalkNode[] = response.elements

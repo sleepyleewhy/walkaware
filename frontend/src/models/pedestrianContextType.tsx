@@ -44,4 +44,7 @@ export type PedestrianContextType = {
     isCrosswalkDetectionActive: boolean,
     isWatchingDetectionActive: boolean,
     isCrosswalkLocatorActive: boolean
+    
+    allowImageStorage: boolean,
+    setAllowImageStorage: Dispatch<SetStateAction<boolean>>
 }

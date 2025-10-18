@@ -47,6 +47,7 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
         useOrientation(orientationDebug);
 
     const [crosswalkId, setCrosswalkId] = useState(0);
+    const [allowImageStorage, setAllowImageStorage] = useState<boolean>(false);
     
     const socket = useSocketContext();
 
@@ -57,7 +58,8 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
         alertLevel,
         setAlertLevel,
         isCameraActive,
-        setIsCameraActive
+        setIsCameraActive,
+        allowImageStorage
     );
     const isWatchingDetectionActive = useWatchingDetection(
         magnitude,
@@ -115,7 +117,9 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
 
         isCrosswalkDetectionActive,
         isWatchingDetectionActive,
-        isCrosswalkLocatorActive
+        isCrosswalkLocatorActive,
+        allowImageStorage,
+        setAllowImageStorage
     };
 
     return (

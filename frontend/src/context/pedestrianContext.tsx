@@ -44,6 +44,9 @@ const defaultContext: PedestrianContextType = {
     isCrosswalkDetectionActive: false,
     isWatchingDetectionActive: false,
     isCrosswalkLocatorActive: false
+    ,
+    allowImageStorage: false,
+    setAllowImageStorage: () => {}
 }
 
 
