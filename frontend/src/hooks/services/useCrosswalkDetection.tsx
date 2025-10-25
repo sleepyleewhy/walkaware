@@ -32,24 +32,20 @@ const useCrosswalkDetection = (
 
     useEffect(() => {
         socket.on("predict_result_" + user_guid, (data) => {
-            if (alertlevelRef.current >=1){
+            if (alertlevelRef.current >= 1) {
                 if (data === true) {
                     noCrosswalkCounter.current = 0;
                     if (alertlevelRef.current === 1) {
                         setAlertLevel(2);
                     }
-                }
-                else {
-                    if (noCrosswalkCounter.current >= 10) {
+                } else {                   
+                    noCrosswalkCounter.current++;
+                    if (noCrosswalkCounter.current >= 5) {
                         setAlertLevel(1);
                         noCrosswalkCounter.current = 0;
                     }
-                    else {
-                        noCrosswalkCounter.current++;
-                    }
                 }
             }
-
         });
 
         return () => {

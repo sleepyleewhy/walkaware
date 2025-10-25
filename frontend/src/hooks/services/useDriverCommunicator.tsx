@@ -115,9 +115,15 @@ const useDriverCommuncicator = (
         // Enter newly added crosswalks
         for (const id of newIds) {
             if (!joinedIds.current.has(id)) {
-                const distance = getDistance(id);
-                const payload: { crosswalk_id: number; distance?: number } = { crosswalk_id: id };
+                const cw = (dangeredRef.current ?? []).find(c => c.id === id);
+                const distance = cw?.distance;
+                const payload: { crosswalk_id: number; distance?: number; speed?: number | null } = { crosswalk_id: id };
                 if (typeof distance === 'number' && isFinite(distance)) payload.distance = distance;
+                if (cw && typeof cw.speed === 'number' && isFinite(cw.speed)) {
+                    payload.speed = cw.speed;
+                } else {
+                    payload.speed = null;
+                }
                 try {
                     socket.emit('driver_enter', payload);
                 } catch {
@@ -131,16 +137,22 @@ const useDriverCommuncicator = (
         if (joinedIds.current.size > 0) {
             if (!intervalId.current) {
                 intervalId.current = setInterval(() => {
-                    for (const id of joinedIds.current) {
-                        const distance = getDistance(id);
-                        const payload: { crosswalk_id: number; distance?: number } = { crosswalk_id: id };
-                        if (typeof distance === 'number' && isFinite(distance)) payload.distance = distance;
-                        try {
-                            socket.emit('driver_update', payload);
-                        } catch {
-                            // ignore
+                        for (const id of joinedIds.current) {
+                            const cw = (dangeredRef.current ?? []).find(c => c.id === id);
+                            const distance = cw?.distance;
+                            const payload: { crosswalk_id: number; distance?: number; speed?: number | null } = { crosswalk_id: id };
+                            if (typeof distance === 'number' && isFinite(distance)) payload.distance = distance;
+                            if (cw && typeof cw.speed === 'number' && isFinite(cw.speed)) {
+                                payload.speed = cw.speed;
+                            } else {
+                                payload.speed = null;
+                            }
+                            try {
+                                socket.emit('driver_update', payload);
+                            } catch {
+                                // ignore
+                            }
                         }
-                    }
                 }, UPDATE_INTERVAL_MS);
             }
         } else {

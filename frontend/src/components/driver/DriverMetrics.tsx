@@ -7,9 +7,9 @@ import { Label } from "../ui/label";
 const DriverMetrics: React.FC = () => {
     const context = useDriverContext();
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 space-y-5 space-x-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Alert Card */}
-            <Card className="bg-gray-100">
+            <Card>
                 <CardHeader>
                     <CardTitle>Alert</CardTitle>
                 </CardHeader>
@@ -26,7 +26,7 @@ const DriverMetrics: React.FC = () => {
             </Card>
 
             {/* Location Card */}
-            <Card className="bg-gray-100">
+            <Card>
                 <CardHeader>
                     <CardTitle>Location</CardTitle>
                 </CardHeader>
