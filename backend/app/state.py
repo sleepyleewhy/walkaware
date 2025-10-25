@@ -65,17 +65,23 @@ async def remove_ped(db: AsyncClient, crosswalk_id: int, sid: str):
         "peds": ArrayRemove([sid])
     })
 
-async def add_driver(db: AsyncClient, crosswalk_id: int, sid: str, distance: Optional[float]):
+async def add_driver(db: AsyncClient, crosswalk_id: int, sid: str, distance: Optional[float], speed: Optional[float] = None):
     await ensure_crosswalk(db, crosswalk_id)
     await crosswalk_ref(db, crosswalk_id).update({
-        f"drivers.{sid}": {"distance": distance, "ts": time.time()}
+        f"drivers.{sid}": {"distance": distance, "speed": speed if speed is not None else None, "ts": time.time()}
     })
 
-async def update_driver(db: AsyncClient, crosswalk_id: int, sid: str, distance: Optional[float]):
-    await crosswalk_ref(db, crosswalk_id).update({
+async def update_driver(db: AsyncClient, crosswalk_id: int, sid: str, distance: Optional[float], speed: Optional[float] = None):
+    updates = {
         f"drivers.{sid}.distance": distance,
         f"drivers.{sid}.ts": time.time()
-    })
+    }
+    if speed is not None:
+        updates[f"drivers.{sid}.speed"] = speed
+    else:
+        updates.setdefault(f"drivers.{sid}.speed", None)
+
+    await crosswalk_ref(db, crosswalk_id).update(updates)
 
 async def remove_driver(db: AsyncClient, crosswalk_id: int, sid: str):
     cw_ref = crosswalk_ref(db, crosswalk_id)

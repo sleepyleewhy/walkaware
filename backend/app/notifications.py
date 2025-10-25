@@ -10,10 +10,14 @@ from app.state import (
     remove_driver,
     remove_running_task,
     DRIVER_PRESENCE_TTL,
-    PED_CRITICAL_DISTANCE,
-    DRIVER_CRITICAL_DISTANCE,
     DEBOUNCE_MIN_DISTANCE_DELTA,
 )
+
+MIN_ALERT_SPEED_MPS = 1.4
+DRIVER_REACTION_TIME_S = 1.5
+AVG_DECELERATION_MPS2 = 6.0
+SAFETY_BUFFER_M = 5.0
+OUTER_ALERT_TIME_FACTOR = 2.0
 
 async def emit_to_sids(sids: List[str], event: str, payload: dict):
     for sid in sids:
@@ -32,7 +36,6 @@ async def emit_presence(crosswalk_id: int, peds: List[str], drivers: List[str]):
     }
     await emit_to_sids(peds, "presence", payload)
     await emit_to_sids(drivers, "presence", payload)
-
 
 async def handle_distance_based_notifications(crosswalk_id: int, cw: Dict[str, Any] = None):
     """
@@ -57,22 +60,13 @@ async def handle_distance_based_notifications(crosswalk_id: int, cw: Dict[str, A
         drivers_map: Dict[str, Dict[str, Any]] = cw.get("drivers", {}) or {}
         last_broadcast: Dict[str, Any] = cw.get("last_broadcast", {}) or {}
 
-        # Track driver critical state map
         driver_active_map: Dict[str, float] = last_broadcast.get("driver_critical_active", {}) or {}
 
-        # Expire drivers by timestamp
         cutoff = now - DRIVER_PRESENCE_TTL
         expired = [sid for sid, info in drivers_map.items() if info.get("ts", 0) < cutoff]
         for sid in expired:
             drivers_map.pop(sid, None)
             driver_active_map.pop(sid, None)
-
-        distances = [
-            info.get("distance")
-            for info in drivers_map.values()
-            if info.get("distance") is not None
-        ]
-        distances = [d for d in distances if d is not None]
 
         ped_count = len(peds)
         prev_ped_critical = last_broadcast.get("ped_critical_min_distance")
@@ -83,51 +77,29 @@ async def handle_distance_based_notifications(crosswalk_id: int, cw: Dict[str, A
 
         driver_events = []  # list[(event_type, sid)]
 
-        # Driver critical logic using driver_active_map
-        if distances:
-            min_dist = min(distances)
-        else:
-            min_dist = None
+        ped_triggering_distances = []  # distances of drivers that trigger outer zone
 
-        # Ped critical handling
-        if not distances or min_dist is None:
-            # No active drivers => end alert if was active
-            if prev_ped_critical is not None:
-                ped_alert_end_to_emit = True
-                last_broadcast.pop("ped_critical_min_distance", None)
-        else:
-            if min_dist <= PED_CRITICAL_DISTANCE and ped_count > 0:
-                # Emit only if new or debounce threshold exceeded
-                if (
-                    prev_ped_critical is None
-                    or abs(prev_ped_critical - min_dist) >= DEBOUNCE_MIN_DISTANCE_DELTA
-                ):
-                    last_broadcast["ped_critical_min_distance"] = min_dist
-                    ped_alert_payload = {
-                        "crosswalk_id": crosswalk_id,
-                        "min_distance": min_dist,
-                        "ts": int(now),
-                    }
-            else:
-                if prev_ped_critical is not None:
-                    ped_alert_end_to_emit = True
-                    last_broadcast.pop("ped_critical_min_distance", None)
-
-        # Driver per-sid critical / end logic
         for sid, info in list(drivers_map.items()):
             d = info.get("distance")
+            speed = info.get("speed")
             if d is None:
                 continue
+
+            if speed is None or speed <= MIN_ALERT_SPEED_MPS:
+                continue
+
+            reaction_dist = speed * DRIVER_REACTION_TIME_S
+            braking_dist = (speed * speed) / (2.0 * AVG_DECELERATION_MPS2)
+            inner_alert_distance = reaction_dist + braking_dist + SAFETY_BUFFER_M
+            outer_alert_distance = inner_alert_distance * OUTER_ALERT_TIME_FACTOR
+
+            if ped_count > 0 and d <= outer_alert_distance:
+                ped_triggering_distances.append(d)
+
             prev_for_sid = driver_active_map.get(sid)
-            active_condition = (
-                d <= DRIVER_CRITICAL_DISTANCE and ped_count > 0
-            )
+            active_condition = (ped_count > 0 and d <= inner_alert_distance)
             if active_condition:
-                # Debounce on distance
-                if (
-                    prev_for_sid is None
-                    or abs(prev_for_sid - d) >= DEBOUNCE_MIN_DISTANCE_DELTA
-                ):
+                if prev_for_sid is None or abs(prev_for_sid - d) >= DEBOUNCE_MIN_DISTANCE_DELTA:
                     driver_events.append(("driver_critical", sid))
                     driver_active_map[sid] = d
             else:
@@ -135,7 +107,22 @@ async def handle_distance_based_notifications(crosswalk_id: int, cw: Dict[str, A
                     driver_events.append(("alert_end", sid))
                     driver_active_map.pop(sid, None)
 
-        # Persist updated maps (single update write)
+        if not ped_triggering_distances:
+            if prev_ped_critical is not None:
+                ped_alert_end_to_emit = True
+                last_broadcast.pop("ped_critical_min_distance", None)
+        else:
+            min_trigger = min(ped_triggering_distances)
+            if ped_count > 0 and (
+                prev_ped_critical is None or abs(prev_ped_critical - min_trigger) >= DEBOUNCE_MIN_DISTANCE_DELTA
+            ):
+                last_broadcast["ped_critical_min_distance"] = min_trigger
+                ped_alert_payload = {
+                    "crosswalk_id": crosswalk_id,
+                    "min_distance": min_trigger,
+                    "ts": int(now),
+                }
+
         last_broadcast["driver_critical_active"] = driver_active_map
         await crosswalk_ref(db, crosswalk_id).update(
             {
@@ -144,7 +131,6 @@ async def handle_distance_based_notifications(crosswalk_id: int, cw: Dict[str, A
             }
         )
 
-        # Emit events (network IO after persistence)
         if ped_alert_payload:
             await emit_to_sids(peds, "ped_critical", ped_alert_payload)
 
@@ -159,7 +145,6 @@ async def handle_distance_based_notifications(crosswalk_id: int, cw: Dict[str, A
             payload = {"crosswalk_id": crosswalk_id, "ts": int(now)}
             await emit_to_sids([sid], evt, payload)
 
-        # Presence always after other notifications
         await emit_presence(crosswalk_id, peds, list(drivers_map.keys()))
 
     except Exception:
