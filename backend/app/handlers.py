@@ -129,9 +129,10 @@ async def ped_leave(sid, data):
 async def driver_enter(sid, data):
     crosswalk_id = data["crosswalk_id"]
     distance = data.get("distance")
+    speed = data.get("speed")
     db = await get_client()
     await set_role(db, sid, "driver")
-    await add_driver(db, crosswalk_id, sid, distance)
+    await add_driver(db, crosswalk_id, sid, distance, speed=speed)
     await _ensure_background_task_running(crosswalk_id)
 
 
@@ -139,8 +140,9 @@ async def driver_enter(sid, data):
 async def driver_update(sid, data):
     crosswalk_id = data["crosswalk_id"]
     distance = data.get("distance")
+    speed = data.get("speed")
     db = await get_client()
-    await update_driver(db, crosswalk_id, sid, distance)
+    await update_driver(db, crosswalk_id, sid, distance, speed=speed)
     await _ensure_background_task_running(crosswalk_id)
 
 
