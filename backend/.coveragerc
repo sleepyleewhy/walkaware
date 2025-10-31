@@ -1,0 +1,7 @@
+[run]
+source = backend
+omit =
+    backend/tests/*
+    backend/crosswalk-detection-model/*
+    backend/__pycache__/*
+    */site-packages/*
