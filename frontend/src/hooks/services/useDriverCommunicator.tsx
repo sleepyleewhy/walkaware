@@ -20,23 +20,31 @@ const useDriverCommuncicator = (
         alertLevelRef.current = alertLevel;
     }, [alertLevel]);
 
-    // Keep latest dangeredCrosswalks in a ref for reconnect logic
     const dangeredRef = useRef<CrosswalkCoordinates[] | undefined>(dangeredCrosswalks);
     useEffect(() => {
         dangeredRef.current = dangeredCrosswalks;
     }, [dangeredCrosswalks]);
 
-    // Helper to get current distance for a crosswalk id
     const getDistance = useCallback((id: number): number | undefined => {
         const cw = (dangeredCrosswalks ?? []).find(c => c.id === id);
         return cw?.distance;
     }, [dangeredCrosswalks]);
 
-    // Global listeners for server → driver notifications
     useEffect(() => {
         const handlePresence = (payload: { crosswalk_id: number; ped_count: number; driver_count: number; ts: number }) => {
-            if (joinedIds.current.has(payload.crosswalk_id)) {
-                console.log('presence', payload);
+            if (!joinedIds.current.has(payload.crosswalk_id)) return;
+            console.log('presence', payload);
+
+            if (activeCriticals.current.size === 0) {
+                if (payload.ped_count > 0) {
+                    if (alertLevelRef.current < 3) {
+                        setAlertLevel(3);
+                    }
+                } else {
+                    if (alertLevelRef.current >= 3) {
+                        setAlertLevel(2);
+                    }
+                }
             }
         };
 
@@ -58,9 +66,7 @@ const useDriverCommuncicator = (
             if (activeCriticals.current.has(crosswalk_id)) {
                 activeCriticals.current.delete(crosswalk_id);
                 if (activeCriticals.current.size === 0) {
-                    if (alertLevelRef.current === 4) {
-                        setAlertLevel(3);
-                    }
+                    if (alertLevelRef.current === 4) setAlertLevel(3);
                 }
             }
         };
@@ -77,7 +83,7 @@ const useDriverCommuncicator = (
         };
     }, [socket, setAlertLevel]);
 
-    // Join/leave crosswalks based on current dangered list
+    
     useEffect(() => {
         const newIds = new Set<number>((dangeredCrosswalks ?? []).map(cw => cw.id));
         if (alertLevel < 2) {
@@ -98,7 +104,7 @@ const useDriverCommuncicator = (
             joined.clear();
             return;
         }
-        // Leave removed crosswalks
+        
         for (const id of Array.from(joinedIds.current)) {
             if (!newIds.has(id)) {
                 try {
@@ -112,7 +118,7 @@ const useDriverCommuncicator = (
             }
         }
 
-        // Enter newly added crosswalks
+        
         for (const id of newIds) {
             if (!joinedIds.current.has(id)) {
                 const cw = (dangeredRef.current ?? []).find(c => c.id === id);
@@ -133,7 +139,7 @@ const useDriverCommuncicator = (
             }
         }
 
-        // Start/stop periodic driver_update
+        
         if (joinedIds.current.size > 0) {
             if (!intervalId.current) {
                 intervalId.current = setInterval(() => {
@@ -166,7 +172,6 @@ const useDriverCommuncicator = (
         };
     }, [dangeredCrosswalks, socket, getDistance, alertLevel]);
 
-    // Unmount cleanup: leave all joined crosswalks and clear timers
     useEffect(() => {
 
         const joined = joinedIds.current;
