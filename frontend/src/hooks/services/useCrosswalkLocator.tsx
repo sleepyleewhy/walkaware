@@ -93,72 +93,7 @@ const useCrosswalkLocator = (
         }
         return bestDistance;
     },[calculateNodeDistance])
-
-
-
-
-    // Fetch crosswalks from Overpass API
-    // This function fetches crosswalks from the Overpass API based on the user's location
-    // const getCrosswalksNearby = useCallback(async () => {
-    //     if (!location) return;
-    //     if (location.accuracy > 500) {
-    //         console.log('accuracy too low')
-    //         throw new Error("Location accuracy is too low");
-    //     }
-    //     try {
-    //         const response = await fetch("https://overpass.private.coffee/api/interpreter",
-    //             {
-    //                 method: "POST",
-    //                 body: `data= ${encodeURIComponent(`
-    //                     [out:json];
-    //                     (
-    //                         way["highway"="footway"]["footway"="crossing"](around:${location.accuracy}, ${location.latitude}, ${location.longitude});
-    //                         node["highway"="crossing"]["crossing:markings"="zebra"](around:${location.accuracy}, ${location.latitude}, ${location.longitude});
-    //                     );
-    //                     out body;
-    //                     >;
-    //                     out skel qt;
-    //                     `)}`
-    //             }
-    //         ).then((res) => res.json())
-
-    //         const allCrosswalksNodes = response.elements
-    //             .filter((element: { type: string }) => element.type === 'node')
-    //             .map((element: { id: number; lat: number; lon: number }) => {
-    //                 const crosswalkNode: CrosswalkNode = {
-    //                     id: element.id,
-    //                     lon: element.lon,
-    //                     lat: element.lat,
-    //                     isAlone: true
-    //                 };
-    //                 return crosswalkNode;
-    //             })
-    //         crosswalks.current = response.elements
-    //             .filter((element: { type: string }) => element.type === 'way')
-    //             .map((element: { id: number, nodes: number[] }) => {
-    //                 const crosswalkWay: CrosswalkWay = {
-    //                     id: element.id,
-    //                     nodes: element.nodes.map((nodeId: number) => {
-    //                         const node = allCrosswalksNodes.find((node: CrosswalkNode) => node.id === nodeId)
-    //                         if (node) {
-    //                             node.isAlone = false;
-    //                             return node;
-    //                         } else {
-    //                             throw new Error(`Node with id ${nodeId} not found`);
-    //                         }
-    //                     }),
-    //                 };
-    //                 crosswalkWay.angle = calculateCrosswalkAngle(crosswalkWay);
-    //                 return crosswalkWay;
-    //             });
-    //         filteredCrosswalks.current = filterCrosswalksByAngle(crosswalks.current);
-    //         crosswalksNodes.current = filterNodesByAlone(allCrosswalksNodes);
-    //     } catch (err) {
-    //         console.error("Error fetching crosswalks:", err);
-    //     }
-    // }, [location, filterCrosswalksByAngle, calculateCrosswalkAngle])
-
-
+    
     const haversineMeters = useCallback((a: Location, b: Location) => {
         const toRad = (deg: number) => deg * Math.PI / 180;
         const R = 6371e3;
