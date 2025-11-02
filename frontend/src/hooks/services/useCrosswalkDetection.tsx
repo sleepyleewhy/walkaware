@@ -65,7 +65,7 @@ const useCrosswalkDetection = (
                     if (imageRef.current != "") {
                         socket.emit("predict", user_guid, imageRef.current, allowImageStorage);
                     }
-                }, 1000 / 2);
+                }, 1000 / 3);
             }
             
         }
