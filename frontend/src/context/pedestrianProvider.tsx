@@ -131,8 +131,8 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
             <canvas
                 ref={canvasRef}
                 style={{ display: "none" }}
-                height={640}
-                width={640}
+                height={224}
+                width={224}
             ></canvas>
         </>
     );

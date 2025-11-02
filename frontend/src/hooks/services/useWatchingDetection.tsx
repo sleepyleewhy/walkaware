@@ -11,7 +11,7 @@ const useWatchingDetection = (magnitude: number, isMagnitudeActive: boolean, set
     const [magnitudeAverage, setMagnitudeAverage] = useState(0);
     const magnitudeHistory = useRef<number[]>([]);
     const historyLength = 100;
-    const minMagnitude = 0.5;
+    const minMagnitude = 1;
 
     useEffect(() => {
         if (isWatchingDetectionActive && isMagnitudeActive) {
