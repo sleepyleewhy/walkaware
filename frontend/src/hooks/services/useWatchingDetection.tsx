@@ -11,6 +11,7 @@ const useWatchingDetection = (magnitude: number, isMagnitudeActive: boolean, set
     const [magnitudeAverage, setMagnitudeAverage] = useState(0);
     const magnitudeHistory = useRef<number[]>([]);
     const historyLength = 100;
+    const minMagnitude = 1;
 
     useEffect(() => {
         if (isWatchingDetectionActive && isMagnitudeActive) {
@@ -39,7 +40,7 @@ const useWatchingDetection = (magnitude: number, isMagnitudeActive: boolean, set
             if (!isMagnitudeActive) {
                 setIsMagnitudeActive(true);
             }
-            if (magnitudeAverage < magnitudeThreshold) {
+            if (magnitudeAverage < magnitudeThreshold && magnitudeAverage > minMagnitude) {
 
                 if (alertLevel < 1) {
                     setAlertLevel(1);

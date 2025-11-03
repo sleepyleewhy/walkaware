@@ -2,12 +2,9 @@ import { CrosswalkCoordinates } from "@/models/crosswalkCoordinates";
 import { Location } from "@/models/location";
 import { Dispatch, SetStateAction, useEffect, useRef } from "react";
 
-
-const DANGERED_THRESHOLD = 100;
-
 const useCrosswalkDistanceWatcher = (
     alertlevel : number,
-    setAlertLevel : Dispatch<SetStateAction<number>>,
+    _setAlertLevel : Dispatch<SetStateAction<number>>,
     relevantCrosswalks : CrosswalkCoordinates[],
     setDangeredCrosswalks : Dispatch<React.SetStateAction<CrosswalkCoordinates[]>>,
     location : Location | null
@@ -39,20 +36,16 @@ const useCrosswalkDistanceWatcher = (
         if (alertlevel >= 2 && !intervalId.current) {
             intervalId.current = setInterval(() => {
                 if (relevantCrosswalks.length > 0 && location != null) {
-                    relevantCrosswalks.forEach(cw => {
-                        cw.distance = calculateDistance(
+                    const withDistances = relevantCrosswalks.map(cw => ({
+                        ...cw,
+                        distance: calculateDistance(
                             location.latitude,
                             location.longitude,
                             cw.lat,
                             cw.lon
-                        );
-                    })
-                    const dangeredCrosswalks = relevantCrosswalks.filter(cw => (cw.distance ?? Infinity) <= DANGERED_THRESHOLD);
-                    if (dangeredCrosswalks.length > 0 && alertlevel < 3) {
-                        setAlertLevel(3);
-                    }
-                    console.log("Dangered crosswalks: ", dangeredCrosswalks);
-                    setDangeredCrosswalks(dangeredCrosswalks);
+                        )
+                    }));
+                    setDangeredCrosswalks(withDistances);
                 }
 
             }, 500)
@@ -69,7 +62,7 @@ const useCrosswalkDistanceWatcher = (
                 intervalId.current = null;
             }
         };
-    }, [alertlevel, location, relevantCrosswalks, setAlertLevel, setDangeredCrosswalks]);
+    }, [alertlevel, location, relevantCrosswalks, setDangeredCrosswalks]);
 }
 
 export default useCrosswalkDistanceWatcher;

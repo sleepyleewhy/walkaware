@@ -2,4 +2,4 @@ from ultralytics import YOLO
 
 model = YOLO("best.pt")
 
-model.predict("test2.mp4", imgsz=640,show=True )
+model.predict("test.mp4", imgsz=224, save=True )
