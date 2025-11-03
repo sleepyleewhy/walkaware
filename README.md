@@ -1,3 +1,4 @@
+*Not actual, rewriting in progress*
 # Setup
 cd frontend -> npm install
 
