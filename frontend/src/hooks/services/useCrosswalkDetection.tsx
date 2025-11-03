@@ -3,43 +3,55 @@ import { Socket } from "socket.io-client";
 
 
 
-const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel: number, setAlertLevel: React.Dispatch<SetStateAction<number>>, 
-    isCameraActive: boolean, setIsCameraActive: React.Dispatch<SetStateAction<boolean>>) => {
+const useCrosswalkDetection = (
+    socket: Socket,
+    imageAsBase64: string,
+    alertLevel: number,
+    setAlertLevel: React.Dispatch<SetStateAction<number>>,
+    isCameraActive: boolean,
+    setIsCameraActive: React.Dispatch<SetStateAction<boolean>>,
+    allowImageStorage: boolean
+) => {
 
 
     const isCrosswalkDetectionActive = alertLevel >= 1;
     const noCrosswalkCounter = useRef(0);
-    const username = localStorage.getItem("username");
     const intervalId = useRef<number | null>(null);
     const imageRef = useRef(imageAsBase64);
-
+    
     useEffect(() => {
         imageRef.current = imageAsBase64;
     }, [imageAsBase64]);
-
+    
+    const user_guid = localStorage.getItem("user_guid");
+    const alertlevelRef = useRef(alertLevel);
 
     useEffect(() => {
-        socket.on("predict_result_" + username, (data) => {
-            if (alertLevel >=1){
+        alertlevelRef.current = alertLevel;
+    }, [alertLevel]);
+
+    useEffect(() => {
+        socket.on("predict_result_" + user_guid, (data) => {
+            if (alertlevelRef.current >= 1) {
                 if (data === true) {
                     noCrosswalkCounter.current = 0;
-                    if (alertLevel === 1) {
+                    if (alertlevelRef.current === 1) {
                         setAlertLevel(2);
                     }
-                }
-                else {
-                    if (noCrosswalkCounter.current >= 10) {
+                } else {                   
+                    noCrosswalkCounter.current++;
+                    if (noCrosswalkCounter.current >= 5) {
                         setAlertLevel(1);
                         noCrosswalkCounter.current = 0;
                     }
-                    else {
-                        noCrosswalkCounter.current++;
-                    }
                 }
             }
-
         });
-    },[socket, alertLevel, username, setAlertLevel] )
+
+        return () => {
+            socket.off("predict_result_" + user_guid);
+        }
+    },[socket, setAlertLevel, user_guid] )
 
 
     useEffect(() => {
@@ -51,9 +63,9 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
                 intervalId.current = window.setInterval(() => {
 
                     if (imageRef.current != "") {
-                        socket.emit("predict", username, imageRef.current);
+                        socket.emit("predict", user_guid, imageRef.current, allowImageStorage);
                     }
-                }, 1000 / 5);
+                }, 1000 / 3);
             }
             
         }
@@ -61,15 +73,21 @@ const useCrosswalkDetection = (socket: Socket, imageAsBase64: string, alertLevel
             if (isCameraActive) {
                 setIsCameraActive(false);
             }
-            socket.off("predict_result_" + username);
             if (intervalId.current) {
                 clearInterval(intervalId.current);
                 intervalId.current = null;
             }
         }
+        return () => {
+            if (intervalId.current) {
+                clearInterval(intervalId.current);
+                intervalId.current = null;
+            }
+        }
+            
 
 
-    }, [alertLevel, imageAsBase64, socket, setAlertLevel, username, isCameraActive, setIsCameraActive]);
+    }, [alertLevel, socket, user_guid, isCameraActive, setIsCameraActive, allowImageStorage]);
     return isCrosswalkDetectionActive
 
 

@@ -12,19 +12,31 @@ const defaultLocation: Location = {
 
 const defaultContext: PedestrianContextType = {
     location: defaultLocation,
+    setLocation: () => {},
     isLocationActive: false,
     setIsLocationActive: () => {},
+    locationDebug: false,
+    setLocationDebug: () => {},
     magnitude: 0,
+    setMagnitude: () => {},
     isMagnitudeActive: false,
     setIsMagnitudeActive: () => {},
+    magnitudeDebug: false,
+    setMagnitudeDebug: () => {},
     magnitudeThreshold: 0,
     setMagnitudeThreshold: () => {},
     orientation: 0,
+    setOrientation: () => {},
     isOrientationActive: false,
     setIsOrientationActive: () => {},
+    orientationDebug: false,
+    setOrientationDebug: () => {},
     cameraImage: "",
+    setCameraImage: () => {},
     isCameraActive: false,
     setIsCameraActive: () => {},
+    cameraDebug: false,
+    setCameraDebug: () => {},
     alertLevel: 0,
     setAlertLevel: () => {},
     crosswalkId: 0,
@@ -32,6 +44,9 @@ const defaultContext: PedestrianContextType = {
     isCrosswalkDetectionActive: false,
     isWatchingDetectionActive: false,
     isCrosswalkLocatorActive: false
+    ,
+    allowImageStorage: false,
+    setAllowImageStorage: () => {}
 }
 
 

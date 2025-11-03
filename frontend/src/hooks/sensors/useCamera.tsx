@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 
 
-const useCamera = (fps: number = 10) => {
+const useCamera = ( cameraDebug : boolean, fps: number = 3) => {
     const camera = useRef<MediaStream | null>(null);
     const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
     const [imageAsBase64, setImageAsBase64] = useState<string>("");
@@ -14,8 +14,8 @@ const useCamera = (fps: number = 10) => {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'environment',
-                    width: { ideal: 640 },
-                    height: { ideal: 640 }
+                    width: { ideal: 224 },
+                    height: { ideal: 224 }
                 },
             });
             camera.current = stream;
@@ -33,13 +33,13 @@ const useCamera = (fps: number = 10) => {
             const ctx = canvasRef.current.getContext('2d');
 
             if (ctx) {
-                ctx.drawImage(videoRef.current, 0, 0, 640, 640);
+                ctx.drawImage(videoRef.current, 0, 0, 224, 224);
                 setImageAsBase64(canvasRef.current.toDataURL('image/jpeg'));
             }
         }
     }
     useEffect(() => {
-        if (isCameraActive) {
+        if (isCameraActive && !cameraDebug) {
             getCameraStream();
             intervalId.current = window.setInterval(captureImage, 1000 / fps);
 
@@ -69,10 +69,10 @@ const useCamera = (fps: number = 10) => {
                 camera.current.getTracks().forEach(track => { track.stop(); });
             }
         }
-    }, [isCameraActive, fps]);
+    }, [isCameraActive, fps, cameraDebug]);
 
 
-    return { isCameraActive, setIsCameraActive, imageAsBase64, videoRef, canvasRef };
+    return { isCameraActive, setIsCameraActive, imageAsBase64, setImageAsBase64, videoRef, canvasRef};
 }
 
 export default useCamera;

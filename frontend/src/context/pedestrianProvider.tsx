@@ -1,4 +1,4 @@
-import React, { useState, ReactNode } from "react";
+import React, { useState, ReactNode, useEffect} from "react";
 import { PedestrianContextType } from "../models/pedestrianContextType";
 
 import { PedestrianContext } from "./pedestrianContext";
@@ -10,6 +10,7 @@ import useCrosswalkDetection from "../hooks/services/useCrosswalkDetection";
 import { useSocketContext } from "./socketContext";
 import useWatchingDetection from "../hooks/services/useWatchingDetection";
 import useCrosswalkLocator from "@/hooks/services/useCrosswalkLocator";
+import usePedestrianCommunicator from "@/hooks/services/usePedestrianCommunicator";
 
 type PedestrianProviderProps = {
     children: ReactNode;
@@ -18,28 +19,47 @@ type PedestrianProviderProps = {
 const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
     children,
 }) => {
-    const { magnitude, isMagnitudeActive, setIsMagnitudeActive } = useMagnitude();
+    const [magnitudeDebug, setMagnitudeDebug] = useState<boolean>(false);
+    const { magnitude, setMagnitude, isMagnitudeActive, setIsMagnitudeActive} = useMagnitude(magnitudeDebug);
     const [magnitudeThreshold, setMagnitudeThreshold] = useState<number>(0);
-    const { orientation, isOrientationActive, setIsOrientationActive } =
-        useOrientation();
+
+    const [orientationDebug, setOrientationDebug] = useState<boolean>(false);
+    
+
+    const [cameraDebug, setCameraDebug] = useState<boolean>(false);
     const {
         imageAsBase64,
+        setImageAsBase64,
         isCameraActive,
         setIsCameraActive,
         canvasRef,
-        videoRef,
-    } = useCamera();
+        videoRef
+    } = useCamera(cameraDebug);
+
     const [alertLevel, setAlertLevel] = useState<number>(-1);
-    const { location, isLocationActive, setIsLocationActive } = useLocation(alertLevel);
+    useEffect(() => {
+        console.log("[alertLevel] changed to", alertLevel);
+    }, [alertLevel]);
+
+    const [locationDebug, setLocationDebug] = useState<boolean>(false);
+    const { location, setLocation, isLocationActive, setIsLocationActive} = useLocation(alertLevel, locationDebug);
+    const { orientation,setOrientation, isOrientationActive, setIsOrientationActive } =
+        useOrientation(orientationDebug);
+
     const [crosswalkId, setCrosswalkId] = useState(0);
+    const [allowImageStorage, setAllowImageStorage] = useState<boolean>(false);
+    
     const socket = useSocketContext();
+
+
     const isCrosswalkDetectionActive = useCrosswalkDetection(
         socket,
         imageAsBase64,
         alertLevel,
         setAlertLevel,
         isCameraActive,
-        setIsCameraActive
+        setIsCameraActive,
+        allowImageStorage
     );
     const isWatchingDetectionActive = useWatchingDetection(
         magnitude,
@@ -50,28 +70,44 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
         setAlertLevel
     );
 
-    const isCrosswalkLocatorActive = useCrosswalkLocator(location, alertLevel, setCrosswalkId, orientation)
+    const isCrosswalkLocatorActive = useCrosswalkLocator(location, alertLevel, setCrosswalkId, orientation, isOrientationActive, setIsOrientationActive)
+    
+    usePedestrianCommunicator(crosswalkId, socket, alertLevel, setAlertLevel);
 
 
     const contextValue: PedestrianContextType = {
         location,
+        setLocation,
         isLocationActive,
         setIsLocationActive,
+        locationDebug,
+        setLocationDebug,
+
 
         magnitude,
+        setMagnitude,
         isMagnitudeActive,
         setIsMagnitudeActive,
+        magnitudeDebug,
+        setMagnitudeDebug,
 
         magnitudeThreshold,
         setMagnitudeThreshold,
 
         orientation,
+        setOrientation,
         isOrientationActive,
         setIsOrientationActive,
+        orientationDebug,
+        setOrientationDebug,
 
         cameraImage: imageAsBase64,
+        setCameraImage: setImageAsBase64,
         isCameraActive,
         setIsCameraActive,
+        cameraDebug,
+        setCameraDebug,
+
 
         alertLevel,
         setAlertLevel,
@@ -81,7 +117,9 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
 
         isCrosswalkDetectionActive,
         isWatchingDetectionActive,
-        isCrosswalkLocatorActive
+        isCrosswalkLocatorActive,
+        allowImageStorage,
+        setAllowImageStorage
     };
 
     return (
@@ -93,8 +131,8 @@ const PedestrianProvider: React.FC<PedestrianProviderProps> = ({
             <canvas
                 ref={canvasRef}
                 style={{ display: "none" }}
-                height={640}
-                width={640}
+                height={224}
+                width={224}
             ></canvas>
         </>
     );

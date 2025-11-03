@@ -1,0 +1,63 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FastAPI Dev",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "main:app",
+        "--reload",
+        "--host", "0.0.0.0",
+        "--port", "8000"
+      ],
+      "cwd": "${workspaceFolder}/backend",
+      "jinja": true,
+      "justMyCode": true
+    },
+
+    {
+      "name": "Run Vite Dev Server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/frontend"
+    },
+
+    {
+      "name": "Launch Frontend in Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "preLaunchTask": ""
+    },
+
+    {
+      "name": "Attach to Running Frontend (Chrome)",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}/frontend/src"
+    }
+  ],
+
+  "compounds": [
+    {
+      "name": "Frontend: Run & Debug (dev server + chrome)",
+      "configurations": [
+        "Run Vite Dev Server",
+        "Launch Frontend in Chrome"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Backend Only",
+      "configurations": [
+        "FastAPI Dev"
+      ],
+      "stopAll": true
+    }
+  ]
+}

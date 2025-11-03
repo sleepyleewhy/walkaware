@@ -8,10 +8,10 @@ import {
     DrawerTitle,
     DrawerTrigger,
 } from "@/components/ui/drawer"
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import { usePedestrianContext } from "@/context/pedestrianContext";
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../ui/card";
 import { toast } from "sonner";
 
 
@@ -84,6 +84,12 @@ const PedestrianCalibrationDrawer: React.FC = () => {
             }
         }, 20000);
     }
+    const setDebugValues = () => {
+        watchingAverage.current = 12;
+        notWatchingAverage.current = 1;
+        context.setMagnitudeThreshold((watchingAverage.current + notWatchingAverage.current) / 2);
+        toast("Debug values set, you can now close the drawer.");
+    }
 
 
 
@@ -133,9 +139,10 @@ const PedestrianCalibrationDrawer: React.FC = () => {
                     </Card>
                 </div>
                 <DrawerFooter>
-                    <Button onClick={() => StartCalibrating()} disabled={isCalibrating == true}>Start Calibrating</Button>
+                    <Button autoFocus onClick={() => StartCalibrating()} disabled={isCalibrating == true}>Start Calibrating</Button>
                     <Button onClick={() => resetCalibration()} disabled={isCalibrating == true}>Reset Calibration</Button>
-                    <DrawerClose>
+                    {import.meta.env.DEV &&<Button onClick={() => setDebugValues()}>Use Debug values</Button>}
+                    <DrawerClose asChild>
                         <Button variant="outline" onClick={() => calibratingCanceled()}>Close</Button>
                     </DrawerClose>
                 </DrawerFooter>

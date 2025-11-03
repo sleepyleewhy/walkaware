@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { CalculateMagnitude } from "../../utils/magnitudeCalculator";
 
 
-const useMagnitude = () => {
+const useMagnitude = (magnitudeDebug : boolean) => {
     const [magnitude, setMagnitude] = useState<number>(0);
     const [isMagnitudeActive, setIsMagnitudeActive] = useState<boolean>(false);
+
 
     useEffect(() => {
         const handleMotionEvent = (event: DeviceMotionEvent) => {
@@ -15,17 +16,17 @@ const useMagnitude = () => {
                 throw new Error("No acceleration data available")
             }
         }
-
-        if (window.DeviceMotionEvent && isMagnitudeActive){
-            window.addEventListener('devicemotion', handleMotionEvent)
+        if (!magnitudeDebug) {
+            if (window.DeviceMotionEvent && isMagnitudeActive) {
+                window.addEventListener('devicemotion', handleMotionEvent)
+            }
+            else if (window.DeviceMotionEvent && !isMagnitudeActive) {
+                window.removeEventListener('devicemotion', handleMotionEvent)
+            }
+            else {
+                throw new Error("DeviceMotionEvent not available")
+            }
         }
-        else if (window.DeviceMotionEvent && !isMagnitudeActive) {
-            window.removeEventListener('devicemotion', handleMotionEvent)
-        }
-        else {
-            throw new Error("DeviceMotionEvent not available")
-        }
-
         return () => {
             if (window.DeviceMotionEvent) {
                 window.removeEventListener('devicemotion', handleMotionEvent)
@@ -33,10 +34,10 @@ const useMagnitude = () => {
         }
 
 
-    }, [isMagnitudeActive])
+    }, [isMagnitudeActive, magnitudeDebug])
 
 
-    return {magnitude, isMagnitudeActive, setIsMagnitudeActive};
+    return {magnitude, setMagnitude, isMagnitudeActive, setIsMagnitudeActive};
     
 }
 

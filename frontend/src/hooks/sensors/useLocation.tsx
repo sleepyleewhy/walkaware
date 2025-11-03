@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { Location } from "../../models/location";
 
 
-const useLocation = (alertlevel : number) => {
-    const [location, setLocation] = useState<Location| null>(null);
+const useLocation = (alertlevel : number, locationDebug : boolean) => {
+    const [location, setLocation] = useState<Location>({latitude: 0, longitude: 0, accuracy: 0, speed: 0, timestamp : new Date()});
     const [isLocationActive, setIsLocationActive] = useState<boolean>(false);
 
     useEffect(() => {
         let watchId: number;
-        if (alertlevel >= 0) {
+        if (alertlevel >= 0 && !locationDebug) {
             setIsLocationActive(true);
             const handleSuccess = (position: GeolocationPosition) => {
                 const { latitude, longitude, accuracy, speed } = position.coords;
@@ -45,9 +45,9 @@ const useLocation = (alertlevel : number) => {
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-    }, [isLocationActive, alertlevel]);
+    }, [isLocationActive, alertlevel, locationDebug]);
 
-    return { location,isLocationActive, setIsLocationActive };
+    return { location, setLocation, isLocationActive, setIsLocationActive};
 };
 
 export default useLocation;

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Handlers Test</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .logs { border: 1px solid #333; height: 320px; overflow-y: scroll; padding: 10px; background: #f5f5f5; font-family: monospace; }
+        button { margin: 4px; padding: 8px 10px; }
+        input { margin: 4px; padding: 6px; width: 90px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        .row { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+    </style>
+</head>
+<body>
+    <h1>Backend Handlers Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>Connection Status</h2>
+        <div id="connection-status">Disconnected</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Parameters</h2>
+        <div class="row">
+            <label>Crosswalk ID:
+                <input id="cw" type="number" value="1" />
+            </label>
+            <label>Distance:
+                <input id="dist" type="number" value="10" />
+            </label>
+            <label>Speed (m/s, optional):
+                <input id="speed" type="number" step="0.1" placeholder="e.g. 5.0" />
+            </label>
+        </div>
+        <div class="row" style="margin-top:8px;">
+            <div style="min-width:220px;">
+                <strong>Computed Zones</strong>
+                <div id="zone-inner">Inner (m): -</div>
+                <div id="zone-outer">Outer (m): -</div>
+                <div id="zone-status">Status: -</div>
+            </div>
+            <div style="min-width:320px;">
+                <small>Notes: inner = reaction + braking + buffer; outer = inner * factor. Values updated live from Speed input (m/s).</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <div class="row">
+            <button onclick="testPedEnter()">Ped Enter</button>
+            <button onclick="testPedLeave()">Ped Leave</button>
+            <button onclick="testDriverEnter()">Driver Enter</button>
+            <button onclick="testDriverUpdate()">Driver Update</button>
+            <button onclick="testDriverLeave()">Driver Leave</button>
+            <button onclick="quickTest()">Quick Alert Test</button>
+            <button onclick="fullCycle()">Full Cycle (Ped + Driver + Updates + Leave)</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Logs</h2>
+        <div id="logs" class="logs"></div>
+    </div>
+
+    <script>
+        function cwId(){ return parseInt(document.getElementById('cw').value || '1'); }
+        function dist(){ return parseFloat(document.getElementById('dist').value || '10'); }
+
+        const socket = io('http://localhost:8000', {
+            path: '/ws/socket.io',
+            transports: ['websocket']
+        });
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('logs');
+            const logEntry = `<div class="${type}">[${timestamp}] ${message}</div>`;
+            logDiv.insertAdjacentHTML('beforeend', logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            (type === 'error' ? console.error : console.log)(message);
+        }
+
+        // Dynamic zone constants (should mirror server values)
+        const MIN_ALERT_SPEED_MPS = 1.4;
+        const DRIVER_REACTION_TIME_S = 1.5;
+        const AVG_DECELERATION_MPS2 = 6.0;
+        const SAFETY_BUFFER_M = 5.0;
+        const OUTER_ALERT_TIME_FACTOR = 2.0;
+
+        function computeZones(speed) {
+            if (speed == null || isNaN(speed) || !isFinite(speed) || speed <= MIN_ALERT_SPEED_MPS) {
+                return { inner: null, outer: null };
+            }
+            const reaction = speed * DRIVER_REACTION_TIME_S;
+            const braking = (speed * speed) / (2.0 * AVG_DECELERATION_MPS2);
+            const inner = reaction + braking + SAFETY_BUFFER_M;
+            const outer = inner * OUTER_ALERT_TIME_FACTOR;
+            return { inner: inner, outer: outer };
+        }
+
+        function updateZonesDisplay() {
+            const sRaw = document.getElementById('speed').value;
+            const speed = sRaw === '' ? null : parseFloat(sRaw);
+            const dRaw = document.getElementById('dist').value;
+            const distance = dRaw === '' ? null : parseFloat(dRaw);
+            const zones = computeZones(speed);
+            const innerEl = document.getElementById('zone-inner');
+            const outerEl = document.getElementById('zone-outer');
+            const statusEl = document.getElementById('zone-status');
+            if (zones.inner == null) {
+                innerEl.textContent = 'Inner (m): inactive (speed too low or missing)';
+                outerEl.textContent = 'Outer (m): inactive';
+                statusEl.textContent = 'Status: driver will NOT trigger dynamic alerts (speed <= ' + MIN_ALERT_SPEED_MPS + ' m/s)';
+            } else {
+                innerEl.textContent = 'Inner (m): ' + zones.inner.toFixed(2);
+                outerEl.textContent = 'Outer (m): ' + zones.outer.toFixed(2);
+                if (distance == null || isNaN(distance)) {
+                    statusEl.textContent = 'Status: enter a Distance to evaluate';
+                } else if (distance <= zones.inner) {
+                    statusEl.textContent = 'Status: INSIDE INNER zone (driver_critical expected)';
+                } else if (distance <= zones.outer) {
+                    statusEl.textContent = 'Status: inside OUTER zone (ped_critical possible)';
+                } else {
+                    statusEl.textContent = 'Status: outside outer zone (no dynamic alert)';
+                }
+            }
+        }
+        document.getElementById('speed').addEventListener('input', updateZonesDisplay);
+        document.getElementById('dist').addEventListener('input', updateZonesDisplay);
+        // initialize
+        updateZonesDisplay();
+
+        function updateConnectionStatus(connected) {
+            const statusDiv = document.getElementById('connection-status');
+            statusDiv.textContent = connected ? `Connected (${socket.id})` : 'Disconnected';
+            statusDiv.style.color = connected ? 'green' : 'red';
+        }
+
+        socket.on('connect', () => {
+            log(`Connected! Socket ID: ${socket.id}`, 'success');
+            updateConnectionStatus(true);
+        });
+
+        socket.on('disconnect', (reason) => {
+            log(`Disconnected: ${reason}`, 'error');
+            updateConnectionStatus(false);
+        });
+
+        socket.on('connect_error', (error) => {
+            log(`Connection failed: ${error.message}`, 'error');
+            updateConnectionStatus(false);
+        });
+
+        // Server events
+        socket.on('driver_critical', (data) => log(`driver_critical: ${JSON.stringify(data)}`, 'error'));
+        socket.on('ped_critical', (data) => log(`ped_critical: ${JSON.stringify(data)}`, 'warning'));
+        socket.on('presence', (data) => log(`presence: ${JSON.stringify(data)}`, 'info'));
+        socket.on('alert_end', (data) => log(`alert_end: ${JSON.stringify(data)}`, 'success'));
+        socket.on('error', (data) => log(`SERVER error event: ${JSON.stringify(data)}`, 'error'));
+
+        function ensureConn() {
+            if (!socket.connected) {
+                log('Not connected!', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        // Ped events
+        function testPedEnter() {
+            if (!ensureConn()) return;
+            socket.emit('ped_enter', { crosswalk_id: cwId() });
+            log(`Sent ped_enter (cw=${cwId()})`);
+        }
+
+        function testPedLeave() {
+            if (!ensureConn()) return;
+            socket.emit('ped_leave', { crosswalk_id: cwId() });
+            log(`Sent ped_leave (cw=${cwId()})`);
+        }
+
+        // Driver events
+        function testDriverEnter() {
+            if (!ensureConn()) return;
+            const payload = { crosswalk_id: cwId(), distance: dist() };
+            const s = parseFloat(document.getElementById('speed').value);
+            if (!isNaN(s) && isFinite(s)) payload.speed = s; // optional
+            else payload.speed = null;
+            socket.emit('driver_enter', payload);
+            log(`Sent driver_enter ${JSON.stringify(payload)}`);
+        }
+
+        function testDriverUpdate() {
+            if (!ensureConn()) return;
+            const payload = { crosswalk_id: cwId(), distance: dist() };
+            const s = parseFloat(document.getElementById('speed').value);
+            if (!isNaN(s) && isFinite(s)) payload.speed = s;
+            else payload.speed = null;
+            socket.emit('driver_update', payload);
+            log(`Sent driver_update ${JSON.stringify(payload)}`);
+        }
+
+        function testDriverLeave() {
+            if (!ensureConn()) return;
+            socket.emit('driver_leave', { crosswalk_id: cwId() });
+            log(`Sent driver_leave (cw=${cwId()})`);
+        }
+
+        async function quickTest() {
+            if (!ensureConn()) return;
+            log('Quick test start');
+            socket.emit('ped_enter', { crosswalk_id: cwId() });
+            await sleep(600);
+            socket.emit('driver_enter', { crosswalk_id: cwId(), distance: 8, speed: 5.0 });
+            await sleep(1200);
+            socket.emit('driver_update', { crosswalk_id: cwId(), distance: 6, speed: 5.0 });
+            await sleep(1200);
+            socket.emit('ped_leave', { crosswalk_id: cwId() });
+            socket.emit('driver_leave', { crosswalk_id: cwId() });
+            log('Quick test end', 'success');
+        }
+
+        async function fullCycle() {
+            if (!ensureConn()) return;
+            const id = cwId();
+            log(`Full cycle start (cw=${id})`);
+            socket.emit('ped_enter', { crosswalk_id: id });
+            await sleep(400);
+            socket.emit('driver_enter', { crosswalk_id: id, distance: dist(), speed: parseFloat(document.getElementById('speed').value) || 5.0 });
+            await sleep(500);
+            socket.emit('driver_update', { crosswalk_id: id, distance: dist() - 2, speed: parseFloat(document.getElementById('speed').value) || 5.0 });
+            await sleep(500);
+            socket.emit('driver_update', { crosswalk_id: id, distance: dist() - 4, speed: parseFloat(document.getElementById('speed').value) || 5.0 });
+            await sleep(700);
+            socket.emit('ped_leave', { crosswalk_id: id });
+            await sleep(300);
+            socket.emit('driver_leave', { crosswalk_id: id });
+            log('Full cycle end', 'success');
+        }
+
+        function clearLogs() { document.getElementById('logs').innerHTML = ''; }
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        log('Initializing Socket.IO client...');
+    </script>
+</body>
+</html>

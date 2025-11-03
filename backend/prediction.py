@@ -1,10 +1,19 @@
 import base64
 import numpy as np
 import cv2
+from pathlib import Path
 
 from ultralytics import YOLO
 
-model = YOLO("./crosswalk-detection-model/best.pt")
+_model = None
+
+
+def get_model():
+    global _model
+    if _model is None:
+        model_path = Path(__file__).with_name("best.pt")
+        _model = YOLO(str(model_path))
+    return _model
 
 
 def base64_to_image(base64_string):
@@ -17,7 +26,8 @@ def base64_to_image(base64_string):
 
 def predictImageIsCrosswalk(base64_string):
     img = base64_to_image(base64_string)
-    results = model.predict(source=img)
+    model = get_model()
+    results = model.predict(source=img, imgsz=224)
     if (results[0].probs.top1 == 0 and results[0].probs.top1conf > 0.9):
         return True
     else:
