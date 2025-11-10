@@ -40,10 +40,6 @@ const useDriverCommuncicator = (
                     if (alertLevelRef.current < 3) {
                         setAlertLevel(3);
                     }
-                } else {
-                    if (alertLevelRef.current >= 3) {
-                        setAlertLevel(2);
-                    }
                 }
             }
         };
