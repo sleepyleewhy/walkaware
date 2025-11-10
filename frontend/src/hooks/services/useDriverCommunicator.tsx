@@ -40,10 +40,6 @@ const useDriverCommuncicator = (
                     if (alertLevelRef.current < 3) {
                         setAlertLevel(3);
                     }
-                } else {
-                    if (alertLevelRef.current >= 3) {
-                        setAlertLevel(2);
-                    }
                 }
             }
         };
@@ -146,6 +142,7 @@ const useDriverCommuncicator = (
                         for (const id of joinedIds.current) {
                             const cw = (dangeredRef.current ?? []).find(c => c.id === id);
                             const distance = cw?.distance;
+                            console.log(cw);
                             const payload: { crosswalk_id: number; distance?: number; speed?: number | null } = { crosswalk_id: id };
                             if (typeof distance === 'number' && isFinite(distance)) payload.distance = distance;
                             if (cw && typeof cw.speed === 'number' && isFinite(cw.speed)) {

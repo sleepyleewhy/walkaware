@@ -43,7 +43,8 @@ const useCrosswalkDistanceWatcher = (
                             location.longitude,
                             cw.lat,
                             cw.lon
-                        )
+                        ),
+                        speed: location.speed
                     }));
                     setDangeredCrosswalks(withDistances);
                 }
