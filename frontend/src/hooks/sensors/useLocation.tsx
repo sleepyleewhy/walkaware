@@ -68,10 +68,13 @@ const useLocation = (alertlevel: number, locationDebug: boolean) => {
                     if (w.length > SPEED_AVERAGE_WINDOW) w.shift();
                     const sum = w.reduce((a, b) => a + b, 0);
                     const avg = sum / w.length;
-                    lastAvgSpeedRef.current = avg;
-                    setLocation({ latitude, longitude, accuracy, speed: avg, timestamp: new Date(ts) });
+                    // round to 3 decimals
+                    const rounded = Math.round(avg * 1000) / 1000;
+                    lastAvgSpeedRef.current = rounded;
+                    setLocation({ latitude, longitude, accuracy, speed: rounded, timestamp: new Date(ts) });
                 } else {
                     const s = lastAvgSpeedRef.current;
+                    // if we have a previous averaged speed, return that (already rounded), otherwise null
                     setLocation({ latitude, longitude, accuracy, speed: s, timestamp: new Date(ts) });
                 }
             } catch {
