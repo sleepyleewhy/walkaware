@@ -13,11 +13,11 @@ from app.state import (
     DEBOUNCE_MIN_DISTANCE_DELTA,
 )
 
-MIN_ALERT_SPEED_MPS = 1.4
+MIN_ALERT_SPEED_MPS = 1.0
 DRIVER_REACTION_TIME_S = 1.5
 AVG_DECELERATION_MPS2 = 6.0
-SAFETY_BUFFER_M = 5.0
-OUTER_ALERT_TIME_FACTOR = 2.0
+SAFETY_BUFFER_M = 20
+OUTER_ALERT_TIME_FACTOR = 2.5
 
 async def emit_to_sids(sids: List[str], event: str, payload: dict):
     for sid in sids:

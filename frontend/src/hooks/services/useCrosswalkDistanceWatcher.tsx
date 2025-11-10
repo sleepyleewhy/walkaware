@@ -49,7 +49,7 @@ const useCrosswalkDistanceWatcher = (
                     setDangeredCrosswalks(withDistances);
                 }
 
-            }, 500)
+            }, 200)
         }
         else {
             if (alertlevel < 2 && intervalId.current) {
