@@ -54,7 +54,7 @@ const AlertHUD: React.FC<AlertHUDProps> = ({ level, role, enableSound = true, en
         visible: true,
         variant: "info" as const,
         title: "Caution",
-        subtitle: "Going towards a crosswalk",
+        subtitle: "Unaware pedestrian on crosswalk",
         classes: "bg-blue-600/95 text-white",
       };
     }
